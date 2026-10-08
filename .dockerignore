@@ -1,0 +1,22 @@
+# Only the runtime dependencies and app belong in the build context.
+**
+!requirements.txt
+!app/
+!app/**
+
+# Keep nested local files out of the application, too.
+**/__pycache__/
+**/*.py[cod]
+**/.DS_Store
+**/.env
+**/.env.*
+**/.aws/
+**/.ssh/
+**/secrets/
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/credentials*.json
+**/client_secret*.json
+**/service-account*.json
