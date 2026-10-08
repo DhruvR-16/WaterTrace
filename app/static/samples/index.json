@@ -1,0 +1,22 @@
+[
+  {
+    "id": "truncated",
+    "name": "The growth illusion",
+    "subtitle": "Same numbers. A very different impression."
+  },
+  {
+    "id": "honest",
+    "name": "A fair comparison",
+    "subtitle": "A chart that should pass the axis checks."
+  },
+  {
+    "id": "inverted",
+    "name": "An upside-down story",
+    "subtitle": "The axis reverses the visual ranking."
+  },
+  {
+    "id": "unreadable",
+    "name": "Missing context",
+    "subtitle": "When the image cannot support a conclusion."
+  }
+]
