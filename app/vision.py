@@ -190,6 +190,43 @@ def ticks_cover_bars(ticks: list[dict], bars: list[dict]) -> bool:
     return all(low-margin <= b["box"][1] and b["box"][1]+b["box"][3] <= high+margin for b in bars)
 
 
+def category_row_evidence(words: list[dict], bars: list[dict], plot_left: float) -> tuple[list[dict], list[dict]]:
+    """Check readable category-row words for marks the geometry may have missed.
+
+    A category label without a detected mark is evidence of incomplete recovery,
+    not evidence that its value is zero. Require anchors beneath at least two
+    bars, and ignore separate title/footer rows. This cannot prove completeness
+    when OCR misses a label or the chart uses rotated/multiline labels.
+    """
+    if len(bars) < 2:
+        return [], []
+    centers = sorted(b["box"][0] + b["box"][2] / 2 for b in bars)
+    spacing = min(np.diff(centers))
+    radius = spacing * .45
+    candidates = [word for word in words if word.get("confidence", 0) >= .55
+                  and word["box"][0] + word["box"][2] / 2 > plot_left]
+    if not candidates:
+        return [], []
+    row_tolerance = max(6, float(np.median([word["box"][3] for word in candidates])) * .65)
+    anchored = []
+    for index, center in enumerate(centers):
+        near = [word for word in candidates if abs(word["box"][0] + word["box"][2] / 2 - center) < radius]
+        if near:
+            first = min(near, key=lambda word: word["box"][1])
+            anchored.append((index, first["box"][1] + first["box"][3] / 2))
+    groups = [[item for item in anchored if abs(item[1] - anchor[1]) <= row_tolerance] for anchor in anchored]
+    if not groups:
+        return [], []
+    group = max(groups, key=lambda items: (len(items), -min(item[1] for item in items)))
+    if len(group) < 2:
+        return [], []
+    row_center = float(np.median([item[1] for item in group]))
+    row = sorted([word for word in candidates if abs(word["box"][1] + word["box"][3] / 2 - row_center) <= row_tolerance],
+                 key=lambda word: word["box"][0])
+    unmatched = [word for word in row if min(abs(word["box"][0] + word["box"][2] / 2 - center) for center in centers) >= radius]
+    return row, unmatched
+
+
 def format_value(value: float, unit: str = "") -> str:
     text = f"{value:.4g}"
     return f"{unit}{text}" if unit in {"$", "€", "£"} else f"{text}{unit}"
@@ -261,7 +298,7 @@ def analyze(raw: bytes, filename: str = "chart.png") -> dict:
     traces: list[dict] = []
     findings: list[dict] = []
     overlays: list[dict] = []
-    geometry = dict(method="color", detected_bars=0)
+    geometry = dict(method="color", detected_bars=0, category_check="not_run")
 
     def trace(tool, action, detail, metrics=None):
         elapsed = round((time.perf_counter() - started) * 1000)
@@ -275,9 +312,9 @@ def analyze(raw: bytes, filename: str = "chart.png") -> dict:
                     width=w, height=h, bars=bars or [], axis=axis, findings=findings, overlays=overlays, geometry=geometry,
                     trace=traces, reconstruction=svg, comparison=comparison,
                     processing_ms=round((time.perf_counter() - started) * 1000),
-                    engine=dict(opencv=cv2.__version__, ocr="Tesseract", policy="axis-audit-v2",
+                    engine=dict(opencv=cv2.__version__, ocr="Tesseract", policy="axis-audit-v3",
                                 deployment="local", cool_verified=False),
-                    scope="Single-series, solid-color vertical bar charts with a readable linear numeric axis. Design checks do not verify the truth of the source data.")
+                    scope="Positive, regularly spaced single-series vertical bars with solid colors or dark grayscale fills and a readable linear numeric axis. Category-row checks cannot prove completeness when labels are unreadable. Design checks do not verify the truth of the source data.")
 
     trace("decode_image", "Inspect image", f"Decoded a {w} × {h} image. Analysis uses pixels only.", {"width": w, "height": h})
     bars, edge = find_bars(image)
@@ -306,7 +343,8 @@ def analyze(raw: bytes, filename: str = "chart.png") -> dict:
     try:
         words = ocr(crop, offset=(0, y0))
     except (pytesseract.TesseractNotFoundError, RuntimeError) as exc:
-        trace("read_axis", "OCR unavailable", str(exc)[:180])
+        trace("read_axis", "OCR unavailable", "The OCR executable is unavailable or the read did not complete.",
+              {"error_type": type(exc).__name__})
         findings.append(dict(kind="ocr_unavailable", severity="review", title="Axis reader unavailable", detail="Tesseract is missing or exceeded its time limit. The image has not been assessed.", evidence=[]))
         return result("review", "Axis reading could not complete.")
     ticks = axis_ticks(words, w)
@@ -405,6 +443,7 @@ def analyze(raw: bytes, filename: str = "chart.png") -> dict:
         bar["label"] = f"Bar {i+1}"
     # Read category labels independently; failure does not fabricate names.
     label_y = min(h - 1, int(max(max(t["cy"] for t in ticks), max(bar["box"][1] + bar["box"][3] for bar in bars)) + 8))
+    category_row, unmatched = [], []
     try:
         label_crop = cv2.resize(image[label_y:], None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
         label_words = ocr(label_crop, offset=(0, label_y), scale=2, psm=6)
@@ -416,10 +455,25 @@ def analyze(raw: bytes, filename: str = "chart.png") -> dict:
                 top = min(word["box"][1] for word in candidates)
                 row = sorted([word for word in candidates if abs(word["box"][1] - top) < 16], key=lambda v: v["box"][0])
                 bar["label"] = " ".join(word["text"] for word in row)[:50]
+        plot_left = max(t["box"][0] + t["box"][2] for t in ticks)
+        category_row, unmatched = category_row_evidence(label_words, bars, plot_left)
     except (pytesseract.TesseractNotFoundError, RuntimeError):
         pass
     trace("recover_values", "Measure bar endpoints", "Applied the fitted scale to each bar endpoint; category names come from OCR when readable.",
           {"estimated_values": [bar["value"] for bar in bars]})
+    geometry["category_check"] = "mismatch" if unmatched else "consistent" if category_row else "unavailable"
+    geometry["category_words_checked"] = len(category_row)
+    geometry["unmatched_category_words"] = [word["text"] for word in unmatched]
+    for word in category_row:
+        overlays.append(dict(box=word["box"], label=("Unmatched category: " if word in unmatched else "Category text: ") + word["text"], kind="category"))
+    trace("check_category_coverage", "Cross-check category labels",
+          "Compare the readable category row with detected bar centers. An unmatched label may indicate a zero-height, very short, or missed mark; its value must not be guessed.",
+          {"check": geometry["category_check"], "words_checked": len(category_row), "unmatched_words": geometry["unmatched_category_words"]})
+    if unmatched:
+        findings.append(dict(kind="incomplete_categories", severity="review", title="Some category labels have no recovered bar",
+                             detail="Readable category text does not line up with the detected bars. A zero-height, very short, or missed bar may be absent. Reconstruction is withheld rather than silently dropping a category or inventing its value.", evidence=unmatched))
+        trace("inspection_policy", "Request human review", "Category coverage disagrees with detected geometry. Do not publish a partial reconstruction.")
+        return result("review", "Not every readable category has a recoverable bar.", axis=axis)
     # Restrict reconstruction to observed endpoints inside the calibration envelope.
     low, high = axis["range"]
     if baseline < -tolerance or baseline < low - tolerance or baseline > high + tolerance or any(bar["value"] < -tolerance or bar["value"] < low - tolerance or bar["value"] > high + tolerance for bar in bars):
