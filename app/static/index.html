@@ -8,6 +8,7 @@
   <title>ChartCourt — See the whole story</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/network.js" defer></script>
   <script src="/static/app.js" defer></script>
 </head>
 <body>
@@ -43,7 +44,7 @@
         <button class="button secondary" id="upload-main"><svg><use href="#i-upload"/></svg> Upload chart</button>
       </div>
       <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp" hidden>
-      <div id="error" role="alert" hidden></div>
+      <div id="error" hidden><p id="error-message" role="alert"></p><button class="button small secondary" id="retry-inspection" hidden>Retry inspection</button></div>
       <section class="case-toolbar" aria-label="Inspection controls">
         <div class="case-name"><svg><use href="#i-file"/></svg><span id="case-name">Opening example…</span><span class="subtle-tag" id="source-tag">EXAMPLE</span></div>
         <button class="text-button export" id="export-report" disabled><svg><use href="#i-download"/></svg> Export report</button>
@@ -71,7 +72,7 @@
             <div class="data-heading"><div><h2>The numbers in the image</h2><p>Estimates from bar endpoints and the calibrated axis.</p></div><button class="button small secondary" id="export-csv" disabled>Download CSV</button></div>
             <div id="data-table"></div><p class="data-note" id="data-sensitivity"></p><p class="data-note">Category names use OCR and may contain reading errors. “Bar 1” indicates an unreadable label. Values are estimates, not the original source table.</p>
           </div>
-          <div id="busy" class="busy"><span class="spinner"></span><div><strong>Examining the chart</strong><span>Measuring bars and reading the axis…</span></div></div>
+          <div id="busy" class="busy"><span class="spinner"></span><div><strong>Examining the chart</strong><span>Measuring bars and reading the axis…</span><button class="text-button" id="cancel-inspection" hidden>Stop waiting</button></div></div>
         </section>
         <aside class="findings-panel" aria-label="Inspection findings" aria-live="polite">
           <div class="findings-header"><span class="eyebrow">THE FINDINGS</span><span id="finding-count" class="count-pill">—</span></div>

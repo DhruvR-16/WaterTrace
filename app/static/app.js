@@ -7,9 +7,38 @@ const fmt = (value, unit = '') => {
 };
 let current = null;
 let pending = false;
-let selectedSample = 'truncated';
 let objectURL = null;
 let toastTimer;
+let activeRequest = null;
+let retryAction = null;
+let retryTimer;
+const fetchJSON = ChartCourtNetwork.fetchJSON;
+
+function showEngine(engine) {
+  const deployment = {local:'LOCAL',container:'CONTAINER',aws:'AWS'}[engine?.deployment] || 'CUSTOM';
+  $('#engine-text').textContent = typeof engine?.opencv === 'string'
+    ? `OpenCV ${engine.opencv.split('.').slice(0,2).join('.')} · ${deployment}${engine.ocr_available === false ? ' · OCR MISSING' : ''}`
+    : 'Engine unreachable';
+}
+
+function clearError() {
+  clearTimeout(retryTimer);
+  retryAction = null;
+  $('#error').hidden = true;
+  $('#retry-inspection').hidden = true;
+}
+
+function showError(message, retry, delay = 0, label = 'Retry inspection') {
+  clearError();
+  $('#error-message').textContent = message;
+  $('#error').hidden = false;
+  retryAction = retry;
+  const button = $('#retry-inspection');
+  button.hidden = !retry;
+  button.disabled = delay > 0;
+  button.textContent = delay > 0 ? `Retry available in ${Math.ceil(delay)}s` : label;
+  if (delay > 0) retryTimer = setTimeout(() => { button.disabled = false; button.textContent = label; }, delay * 1000);
+}
 
 function notify(message) {
   $('#toast').textContent = message;
@@ -53,19 +82,12 @@ function selectView(view) {
   document.querySelectorAll('.view').forEach(el => { el.hidden = el.id !== `view-${view}`; });
 }
 
-async function fetchJSON(url, options = {}) {
-  const response = await fetch(url, options);
-  const result = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(typeof result?.detail === 'string' ? result.detail : `The service returned an error (${response.status}). Please retry.`);
-  if (result === null) throw new Error('The service returned an unreadable response. Please retry.');
-  return result;
-}
-
 async function inspect(url, options, name, example = false) {
   if (pending) return;
   current = null;
-  $('#error').hidden = true;
+  clearError();
   $('#case-name').textContent = name;
+  $('#original').alt = `Chart under inspection: ${name}`;
   $('#source-tag').textContent = example ? 'EXAMPLE' : 'UPLOAD';
   setBusy(true);
   selectView('comparison');
@@ -77,24 +99,36 @@ async function inspect(url, options, name, example = false) {
   $('#original-note').textContent = 'Inspecting the visible scale and bar geometry.';
   $('#reconstruction-note').textContent = 'Same recovered values. A zero baseline.';
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60000);
+  activeRequest = controller;
+  $('#cancel-inspection').hidden = false;
   try {
-    const result = await fetchJSON(url, {method:'POST', ...options, signal:controller.signal});
+    const result = await fetchJSON(url, {method:'POST', ...options, signal:controller.signal, timeoutMs:90000});
     render(result);
     current = result;
   } catch (error) {
     current = null;
-    $('#error').textContent = error.name === 'AbortError' ? 'The inspection took too long. Please retry or use a smaller image.' : error.message || 'Could not connect to the inspection service.';
-    $('#error').hidden = false;
+    showError(error instanceof ChartCourtNetwork.RequestError ? error.message : 'The result could not be displayed. Please retry.',
+      () => inspect(url, options, name, example), error.retryAfter || 0);
+    if (error.code === 'network') showEngine(null);
     $('#verdict').className = 'verdict review';
-    $('#verdict').innerHTML = `<div class="verdict-icon">${icon('info')}</div><h2>Inspection interrupted.</h2><p>Try another image or retry this example.</p>`;
+    $('#verdict').innerHTML = `<div class="verdict-icon">${icon('info')}</div><h2>Inspection interrupted.</h2><p>Try another image or retry this chart.</p>`;
+    $('#findings').innerHTML = '';
+    $('#measurement-summary').innerHTML = '';
+    $('#finding-count').textContent = '—';
+    $('#comparison-metrics').innerHTML = '';
+    $('#evidence-image').innerHTML = '';
+    $('#data-table').innerHTML = '<div class="trace-empty">No numeric estimates are available.</div>';
+    $('#data-sensitivity').textContent = '';
     $('#reconstruction').innerHTML = `<div class="placeholder">${icon('info')}<p>No reconstruction is available.</p></div>`;
+    $('#original-note').textContent = 'No completed inspection is available for this image.';
+    $('#reconstruction-note').textContent = 'Reconstruction unavailable. Retry the inspection.';
     $('#trace-meta').textContent = 'Inspection did not complete';
     $('#trace-list').innerHTML = '<div class="trace-empty">No result was produced.</div>';
-  } finally { clearTimeout(timeout); setBusy(false); }
+  } finally { activeRequest = null; $('#cancel-inspection').hidden = true; setBusy(false); }
 }
 
 function render(r) {
+  showEngine({...r.engine, ocr_available:!r.findings.some(f => f.kind === 'ocr_unavailable')});
   $('#original').src = r.image;
   $('#original').alt = `Uploaded chart: ${r.filename}`;
   const warningCount = r.findings.filter(f => f.severity === 'warning').length;
@@ -130,7 +164,7 @@ function render(r) {
 
 async function openSample(sample) {
   if (pending) return;
-  selectedSample = sample.id;
+  if (objectURL) { URL.revokeObjectURL(objectURL); objectURL = null; }
   document.querySelectorAll('.sample').forEach(b => { b.classList.toggle('active', b.dataset.sample === sample.id); b.setAttribute('aria-pressed', String(b.dataset.sample === sample.id)); });
   $('#original').src = `/static/samples/${sample.id}.png`;
   await inspect(`/api/samples/${sample.id}/analyze`, {}, sample.name, true);
@@ -140,7 +174,6 @@ async function upload(file) {
   if (!file || pending) return;
   if (!['image/png','image/jpeg','image/webp'].includes(file.type)) { notify('Choose a PNG, JPEG, or WebP chart.'); return; }
   if (file.size > 8*1024*1024) { notify('Choose an image under 8 MB.'); return; }
-  selectedSample = null;
   document.querySelectorAll('.sample').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
   if (objectURL) URL.revokeObjectURL(objectURL);
   objectURL = URL.createObjectURL(file);
@@ -160,6 +193,8 @@ $('.tabs').addEventListener('keydown', event => {
   next.focus(); selectView(next.dataset.view);
 });
 $('#upload-main').onclick = $('#upload-sidebar').onclick = () => $('#file-input').click();
+$('#retry-inspection').onclick = () => { if (!pending && retryAction) retryAction(); };
+$('#cancel-inspection').onclick = () => activeRequest?.abort();
 $('#file-input').onchange = event => { upload(event.target.files[0]); event.target.value = ''; };
 $('#export-report').onclick = () => {
   if (!current) return;
@@ -184,11 +219,21 @@ document.addEventListener('drop', event => { event.preventDefault(); dragDepth=0
 document.addEventListener('paste', event => { const item = [...(event.clipboardData?.items || [])].find(i => i.type.startsWith('image/')); if (item) { event.preventDefault(); upload(item.getAsFile()); } });
 
 async function init() {
+  clearError();
+  setBusy(true);
   const results = await Promise.allSettled([fetchJSON('/api/health'), fetchJSON('/api/samples')]);
   const health = results[0].status === 'fulfilled' ? results[0].value : null;
-  const deploymentLabel = {local:'LOCAL',container:'CONTAINER',aws:'AWS'}[health?.deployment] || 'CUSTOM';
-  $('#engine-text').textContent = health ? `OpenCV ${health.opencv.split('.').slice(0,2).join('.')} · ${deploymentLabel}${health.ocr_available ? '' : ' · OCR MISSING'}` : 'Engine offline';
-  if (results[1].status !== 'fulfilled') { setBusy(false); $('#error').textContent='Could not load examples. Check that the Python service is running.'; $('#error').hidden=false; return; }
+  showEngine(health);
+  if (results[1].status !== 'fulfilled' || !Array.isArray(results[1].value) || !results[1].value.length) {
+    setBusy(false);
+    $('#case-name').textContent = 'No example loaded';
+    $('#verdict').innerHTML = `<div class="verdict-icon">${icon('info')}</div><h2>Let’s reconnect.</h2><p>Start the Python service, then reload the examples.</p>`;
+    $('#trace-meta').textContent = 'Service unavailable';
+    $('#trace-list').innerHTML = '<div class="trace-empty">No inspection has started.</div>';
+    $('#reconstruction').innerHTML = `<div class="placeholder">${icon('info')}<p>Waiting for the inspection service.</p></div>`;
+    showError('Could not load examples. Check that the Python service is running.', init, 0, 'Reload examples');
+    return;
+  }
   const samples = results[1].value;
   $('#sample-count').textContent = String(samples.length).padStart(2,'0');
   $('#sample-list').innerHTML = samples.map((sample, i) => `<button class="sample" data-sample="${esc(sample.id)}" aria-pressed="false" title="${esc(sample.subtitle)}"><img class="sample-thumbnail" src="/static/samples/${esc(sample.id)}.png" alt=""><span class="sample-copy"><strong>${esc(sample.name)}</strong><span>CASE ${String(i+1).padStart(2,'0')} · SAMPLE CHART</span></span></button>`).join('');
