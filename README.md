@@ -4,7 +4,7 @@
 
 ChartCourt measures bars, reads axis ticks, highlights the evidence, and reconstructs supported charts with a zero baseline and conventional axis direction. In the included truncated-axis example, the visible bars suggest a 4× ratio, while the recovered values differ by approximately 6.5%.
 
-**Current implementation:** local Python / OpenCV 5 app. It detects nonzero baselines and inverted axes in single-series, solid-color vertical bar charts with readable linear numeric axes. An uncertain scale triggers a second, targeted OCR pass; unresolved images are referred for review. No AI API key is needed. The policy agent is a bounded state machine, not an LLM.
+**Current implementation (v0.2):** local Python / OpenCV 5 app. It detects nonzero baselines and inverted axes in positive, regularly spaced single-series vertical bar charts on light backgrounds, including solid grayscale bars. An uncertain or incomplete scale triggers targeted tick-column OCR; unresolved images are referred for review. No AI API key is needed. The inspection policy is a bounded state machine, not an LLM.
 
 ## Quick start
 
@@ -24,9 +24,13 @@ On Windows, use `py -3.13 -m venv .venv` and replace `.venv/bin/python` with `.v
 
 ## What works
 
-- Four real image examples: truncated axis, conventional axis, inverted axis, and missing ticks.
-- Color segmentation, contour geometry, OCR tick reading, linear axis calibration, and value estimation.
-- Targeted reinspection when the axis is ambiguous, with recorded metrics and decision thresholds.
+- Five real image examples: truncated axis, conventional axis, inverted axis, missing ticks, and grayscale bars.
+- Color/luminance segmentation, contour geometry, OCR tick reading, linear axis calibration, and value estimation.
+- Strict numeric parsing for currency, percentages, English-style thousands separators, and k/M/B suffixes. Ambiguous comma decimals are rejected.
+- Targeted reinspection when the axis is ambiguous or does not cover the bars, with recorded metrics and decision thresholds. Contrast enhancement is only applied to low-contrast retry crops.
+- Geometry guards for irregular spacing, unaligned marks, and multicolor stacks; unsupported charts can still be misinterpreted, so review evidence.
+- Pixel-fit sensitivity ranges in the data table, JSON, and CSV. These are **not statistical confidence intervals** and do not include OCR/model errors.
+- Read-back verification of generated SVG bar count, order, baseline, and numerical heights before offering a reconstruction.
 - Original/reconstruction comparison, evidence overlays, recovered values table, inspection trace.
 - Downloadable reconstructed SVG, estimates CSV, and JSON inspection report with the original file's SHA-256 digest.
 - Upload validation, bounded OCR execution and inspection concurrency, no persistent upload storage.
@@ -35,9 +39,10 @@ On Windows, use `py -3.13 -m venv .venv` and replace `.venv/bin/python` with `.v
 ## Data flow
 
 ```text
-Image bytes → decode/resize → OpenCV colored-bar contours → axis crop OCR
-  → fit scale → if unclear: enlarge + CLAHE + OCR → fit again
-  → unresolved: review / resolved: recover bar values → axis findings → reconstruct
+Image bytes → decode/resize → color + luminance bar geometry → axis crop OCR
+  → fit scale → if unclear/incomplete: isolate tick column + enlarge + OCR
+  → unresolved: review / resolved: recover bar values + pixel-fit ranges
+  → axis findings → reconstruct → verify generated SVG geometry
 ```
 
 `app/vision.py` only sees image bytes and a display filename. It does not read fixture names, labels, expected answers, or sample metadata. The backend returns measured evidence and the browser renders it.
@@ -48,16 +53,21 @@ Image bytes → decode/resize → OpenCV colored-bar contours → axis crop OCR
 .venv/bin/python -m pip install -r requirements-dev.txt
 .venv/bin/python -m pytest -q
 .venv/bin/python scripts/evaluate.py
+.venv/bin/python scripts/evaluate.py --suite all
 ```
 
-Tests run real OCR. They cover numerical recovery, changed filenames, a resized JPEG, erased axes causing reinspection/refusal, blank images, malformed uploads, upload size limits, and sample routing. The initial local suite has **16 passing tests**; see [VERIFICATION.md](VERIFICATION.md) for checks and outstanding validation. These are fixture tests, not an accuracy claim on real-world charts.
+Tests run real OCR. The suite covers numerical recovery, a resized JPEG, erased axes/baseline ticks, grayscale and currency charts, fractional values, small nonzero or uncertain baselines, unsupported layouts, malformed uploads, and reconstruction integrity. The local suite has **50 passing tests**; see [VERIFICATION.md](VERIFICATION.md) for checks and outstanding validation.
+
+The evaluator offers `--suite demo` (5 Matplotlib images), `--suite stress` (15 independently rendered Pillow cases), and `--suite all`. It checks the specific issue, recovered bar count, numerical error, and whether reconstruction should be withheld. It reports reconstruction coverage, unsupported refusal rate, and false flags on clean charts, and exits nonzero on a regression. These cases were used during development: they are **not a held-out or public-dataset accuracy benchmark**.
 
 Regenerate our self-authored examples with `.venv/bin/python scripts/generate_samples.py`. Numerical ground truth lives in `tests/fixtures/truth.json` and is never served to the inspection pipeline. Development dependencies include Matplotlib only for fixture generation.
 
 ## Current boundaries
 
-- Intended for positive, single-series vertical bars with visible solid colors and a linear axis. Stacked/grouped bars, negative bars, log/broken axes, monochrome charts, pictograms, and infographic layouts are unsupported. Detection heuristics can still misinterpret unsupported inputs; results need inspection.
-- Three consistent OCR ticks are required. A good fit is an internal consistency check, not a calibrated probability of correctness.
+- Intended for positive, regularly spaced single-series vertical bars with solid colors or dark grayscale fills on a light background. Stacked/grouped bars, negative bars, log/broken axes, dark backgrounds, pictograms, and infographic layouts are unsupported. Detection heuristics can still misinterpret unsupported inputs; results need inspection.
+- Three consistent OCR ticks must cover the full bar geometry, including the baseline. A good fit is an internal consistency check, not a calibrated probability of correctness.
+- Numeric formatting follows English-style notation. Decimal commas, scientific-notation tick labels, and implicit axis multipliers such as a separate “×10³” annotation are not supported. Units are recovered only when present in the tick text, not inferred from the axis title.
+- Pixel-fit sensitivity is `2 × abs(axis slope) + maximum tick-fit residual` in chart units. It measures a small pixel perturbation, not source-data uncertainty or protection against incorrect OCR. Rendered axis ticks use human-readable intervals without changing the recovered data.
 - Values are estimates from pixel positions. Decimal precision is reported for inspection, not a promise of equivalent source-data accuracy. OCR category names can be wrong.
 - Truncated/inverted axes are design choices to investigate. They do not establish malicious intent, and a clean axis does not establish truthful source data.
 - The app reads available evidence; it does not retrieve or verify the original dataset or accompanying claims.
@@ -107,9 +117,11 @@ app/
 scripts/
   generate_samples.py  Reproducible example chart generation
   evaluate.py          Evaluation against fixture ground truth
+  stress_cases.py      Independent Pillow-based regression chart generator
 tests/
   fixtures/truth.json  Ground truth; never used by the analysis pipeline
   test_inspection.py   Real-OCR regression and API tests
+  test_reliability.py  Additional formats, refusal, and reconstruction tests
 ```
 
 ## Privacy and repository hygiene

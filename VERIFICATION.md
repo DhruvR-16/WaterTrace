@@ -1,14 +1,18 @@
-# MVP verification
+# v0.2 verification
 
 Verified locally on macOS with Python 3.13.6, OpenCV 5.0.0, and Tesseract 5.5.2.
 
 ## Automated checks
 
-`python -m pytest -q`: **16 passed**. The test client currently emits one upstream Starlette/httpx deprecation warning; no test failed.
+`python -m pytest -q`: **50 passed**. Upstream Starlette/httpx and Matplotlib/Pyparsing deprecation warnings remain; no test failed.
 
-Checks cover the four self-authored chart fixtures, numerical recovery, a resized/compressed JPEG with a changed filename, removing the axis, blank images, invalid/oversized uploads, sample allowlisting, numeric parsing, source hashes, trace timings, nonlinear tick rejection, missing OCR, image format/dimension validation, escaped OCR text, and inspection concurrency limits.
+Checks cover five self-authored demo fixtures, 15 independently rendered challenge cases, numerical recovery, a resized/compressed JPEG with a changed filename, removing the axis or baseline tick, blank images, invalid/oversized uploads, sample allowlisting, strict numeric parsing, source hashes, trace timings, mixed-unit/nonlinear tick rejection, missing OCR, image validation, escaped OCR text, corrupted reconstructions, evaluator correctness, and inspection concurrency limits.
 
-`python scripts/evaluate.py`: all four self-authored fixture decisions matched their expectations. Mean absolute numeric errors were about 0.008, 0.115, and 0.100 chart units for the truncated, conventional, and inverted examples. These are fixture-specific results, **not external benchmark accuracy**.
+`python scripts/evaluate.py --suite all`: **20/20 cases met the decision, issue-type, bar-count, reconstruction, and numeric-error checks**. All 14 supported examples were reconstructed; all 6 unsupported/incomplete examples were referred for review. No clean example was flagged. The numeric-error limit is 1.5% of the largest absolute ground-truth value per supported case.
+
+The challenge images are generated with Pillow instead of the demo's Matplotlib renderer. They include grayscale, black truncated bars, mixed colored/grayscale bars, compact currency, fractional values, narrow bars, inverted axes, equal-height inverted bars, missing ticks, logarithmic axes, grouped spacing, multicolor stacks, and positive/negative mixtures. The baseline-tick removal and corrupted-SVG cases are additional tests outside the 20-image evaluator.
+
+These were development regression cases, not an independent dataset or held-out evaluation. The 20/20 result does not establish real-world generalization. Demo mean absolute errors are about 0.0064, 0.1127, 0.0743, and 0.0668 chart units for truncated, conventional, inverted, and grayscale examples respectively.
 
 `node --check app/static/app.js`: passed.
 
@@ -23,6 +27,8 @@ Checks cover the four self-authored chart fixtures, numerical recovery, a resize
 - JSON, CSV, and SVG downloads completed through the browser.
 - Desktop breakpoint at 1440 × 1000 and mobile at 390 × 844 inspected; mobile document width matches viewport width.
 - No browser console errors or warnings were observed during the upload test.
+
+Additional v0.2 browser checks: the grayscale example reconstructed successfully; recovered data displayed per-bar pixel-fit ranges with the statistical-confidence disclaimer; CSV download included unit and range columns; keyboard arrow navigation selected the adjacent tab with a single active tab stop; the unreadable example disabled reconstruction; the expanded table fit a 390-pixel viewport without document overflow.
 
 ## Not yet verified
 
