@@ -35,6 +35,7 @@ On Windows, use `py -3.13 -m venv .venv` and replace `.venv/bin/python` with `.v
 - Downloadable reconstructed SVG, estimates CSV, and JSON inspection report with the original file's SHA-256 digest.
 - Upload validation before multipart parsing, bounded upload/OCR execution and concurrency, safe failure messages, no persistent upload storage.
 - Responsive browser workspace and keyboard-accessible controls.
+- One-click retry after failures, connection-status feedback, and a stop-waiting control. Failed requests are not automatically resubmitted.
 
 ## Data flow
 
@@ -54,9 +55,12 @@ Image bytes → decode/resize → color + luminance bar geometry → axis crop O
 .venv/bin/python -m pytest -q
 .venv/bin/python scripts/evaluate.py
 .venv/bin/python scripts/evaluate.py --suite all
+node --test tests/network.test.cjs
 ```
 
 Tests run real OCR. The suite covers numerical recovery, a resized JPEG, erased axes/baseline ticks, grayscale and currency charts, fractional values, small nonzero or uncertain baselines, unsupported layouts, malformed/streamed uploads, resource cleanup, and reconstruction integrity. The local suite has **80 passing tests**; see [VERIFICATION.md](VERIFICATION.md) for checks and outstanding validation.
+
+The optional frontend tests use Node.js 22's built-in test runner, with no npm dependencies: **19 passing request-handling tests**. They cover deadlines, cancellation, safe response errors, retry delays, and reusing an uploaded file for an explicit retry.
 
 The evaluator offers `--suite demo` (5 Matplotlib images), `--suite stress` (15 independently rendered Pillow cases), and `--suite all`. It checks the specific issue, recovered bar count, numerical error, and whether reconstruction should be withheld. It reports reconstruction coverage, unsupported refusal rate, and false flags on clean charts, and exits nonzero on a regression. These cases were used during development: they are **not a held-out or public-dataset accuracy benchmark**.
 
@@ -107,11 +111,16 @@ curl --fail http://127.0.0.1:8000/api/analyze \
 
 The JSON response contains findings, the input file's SHA-256 digest, evidence boxes, recovered estimates, actual inspection steps, and a reconstruction when the evidence supports it.
 
+Uploads accept one `file` part and no additional fields. The file limit is 8 MiB; the complete multipart body is capped at 8 MiB plus 64 KiB before parsing. Upload-body reads time out after 30 seconds. Per process, at most two uploads and two inspections run concurrently. Expected failure responses contain a JSON `detail`: `400` for malformed requests, `408` for upload timeout, `413` for size limits, `415` for unsupported request encoding/type, `422` for invalid images, and `429` when busy (with `Retry-After`). A generic `500` does not expose private exception details.
+
+The browser bounds startup requests to 10 seconds and inspections to 90 seconds. **Stop waiting** cancels the browser request, not an OCR job already running on the server. Retry is explicit and retains the selected file only in the current browser page; busy responses briefly disable the retry button. Nothing is queued for background retry.
+
 ## Repository layout
 
 ```text
 app/
   main.py              FastAPI routes, upload validation, concurrency limits
+  upload_limits.py     Pre-parser body limits, deadlines, upload admission
   vision.py            OpenCV geometry, OCR, axis policy, reconstruction
   static/              Browser interface and self-authored example PNGs
 scripts/
@@ -122,6 +131,8 @@ tests/
   fixtures/truth.json  Ground truth; never used by the analysis pipeline
   test_inspection.py   Real-OCR regression and API tests
   test_reliability.py  Additional formats, refusal, and reconstruction tests
+  test_upload_limits.py  Stream limits, cleanup, and failure privacy
+  network.test.cjs     Dependency-free frontend request tests
 ```
 
 ## Privacy and repository hygiene

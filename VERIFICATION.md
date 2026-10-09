@@ -18,6 +18,8 @@ These were development regression cases, not an independent dataset or held-out 
 
 `node --check app/static/app.js`: passed.
 
+`node --check app/static/network.js` and `node --test tests/network.test.cjs`: passed, **19 frontend unit tests**. These cover request options, error sanitization, malformed success bodies, bounded Retry-After delays, deadlines while connecting and reading the body, user cancellation, pre-cancelled requests, listener cleanup, and explicit upload retry without automatic resubmission.
+
 ## Browser checks
 
 - Truncated-axis example: original vs reconstruction, approximately 4.0× visible bar ratio vs 1.065× recovered-value ratio.
@@ -31,6 +33,8 @@ These were development regression cases, not an independent dataset or held-out 
 - No browser console errors or warnings were observed during the upload test.
 
 Additional v0.2 browser checks: the grayscale example reconstructed successfully; recovered data displayed per-bar pixel-fit ranges with the statistical-confidence disclaimer; CSV download included unit and range columns; keyboard arrow navigation selected the adjacent tab with a single active tab stop; the unreadable example disabled reconstruction; the expanded table fit a 390-pixel viewport without document overflow.
+
+Recovery checks: the local service was deliberately stopped, then a grayscale fixture was uploaded. The browser showed an actionable connection error, updated the engine indicator, displayed the correct image description, and disabled exports. After restarting the service, **Retry inspection** processed the same retained file without reopening the picker, cleared the error, and restored four data rows and export controls. The retry banner fit a 390 × 844 viewport without document overflow. With the local server temporarily paused, **Stop waiting** removed the busy state, explained that the server may still finish, and offered retry. The server was resumed after this check. Expected failed-network messages occurred during intentional disconnection tests; these are not application-script errors.
 
 ## Not yet verified
 
