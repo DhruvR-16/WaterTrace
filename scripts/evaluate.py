@@ -34,7 +34,7 @@ def demo_cases():
         original_expected = case["expected"]
         yield {**case,
                "expected": "review" if original_expected == "review" else "clear" if original_expected == "clear" else "flagged",
-               "expected_issue": {"truncated": "truncated_axis", "inverted": "inverted_axis"}.get(original_expected),
+               "expected_issue": case.get("expected_issue") or {"truncated": "truncated_axis", "inverted": "inverted_axis"}.get(original_expected),
                "image": (ROOT / "app" / "static" / "samples" / f"{case['id']}.png").read_bytes()}
 
 
