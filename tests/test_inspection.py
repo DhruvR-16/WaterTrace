@@ -85,7 +85,7 @@ def test_upload_api_runs_analysis_and_rejects_invalid_files():
 def test_sample_allowlist_and_health():
     assert client.get("/api/health").json()["ocr_available"] is True
     assert client.post("/api/samples/unknown/analyze").status_code == 404
-    assert len(client.get("/api/samples").json()) == 4
+    assert len(client.get("/api/samples").json()) == len(TRUTH)
 
 
 def test_numeric_parser_does_not_invent_digits():

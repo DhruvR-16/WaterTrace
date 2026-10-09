@@ -117,5 +117,37 @@
     ],
     "ticks": [],
     "expected": "review"
+  },
+  {
+    "id": "grayscale",
+    "name": "Beyond color",
+    "subtitle": "A grayscale chart inspected through luminance.",
+    "title": "Orders fulfilled, by region",
+    "values": [
+      32,
+      47,
+      56,
+      71
+    ],
+    "labels": [
+      "North",
+      "South",
+      "East",
+      "West"
+    ],
+    "limits": [
+      0,
+      80
+    ],
+    "ticks": [
+      0,
+      20,
+      40,
+      60,
+      80
+    ],
+    "ylabel": "Orders",
+    "color": "#555555",
+    "expected": "clear"
   }
 ]

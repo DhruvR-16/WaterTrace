@@ -18,5 +18,10 @@
     "id": "unreadable",
     "name": "Missing context",
     "subtitle": "When the image cannot support a conclusion."
+  },
+  {
+    "id": "grayscale",
+    "name": "Beyond color",
+    "subtitle": "A grayscale chart inspected through luminance."
   }
 ]

@@ -14,7 +14,7 @@ from app.vision import InvalidImage, analyze
 STATIC = Path(__file__).parent / "static"
 MAX_UPLOAD = 8 * 1024 * 1024
 WORKERS = Semaphore(2)
-app = FastAPI(title="ChartCourt", version="0.1.0", description="An evidence-led visual audit for chart axes.")
+app = FastAPI(title="ChartCourt", version="0.2.0", description="An evidence-led visual audit for chart axes.")
 
 
 @app.middleware("http")

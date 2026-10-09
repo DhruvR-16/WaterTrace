@@ -5,8 +5,6 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import numpy as np
-from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLES = ROOT / "app" / "static" / "samples"
@@ -48,6 +46,9 @@ def main():
         dict(id="unreadable", name="Missing context", subtitle="When the image cannot support a conclusion.",
              title="The numbers behind the claim", values=[92, 94, 96, 98], labels=["A", "B", "C", "D"],
              limits=[90, 100], ticks=[], expected="review"),
+        dict(id="grayscale", name="Beyond color", subtitle="A grayscale chart inspected through luminance.",
+             title="Orders fulfilled, by region", values=[32, 47, 56, 71], labels=["North", "South", "East", "West"],
+             limits=[0, 80], ticks=[0, 20, 40, 60, 80], ylabel="Orders", color="#555555", expected="clear"),
     ]
     for spec in specs:
         opts = {k: spec[k] for k in ("values", "labels", "limits", "title", "ticks")}

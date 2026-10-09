@@ -32,7 +32,7 @@
   <div class="layout">
     <aside class="sidebar">
       <button class="button primary new-chart" id="upload-sidebar"><svg><use href="#i-plus"/></svg> New inspection</button>
-      <div class="sidebar-label">EXAMPLE CASES <span>04</span></div>
+      <div class="sidebar-label">EXAMPLE CASES <span id="sample-count">05</span></div>
       <div id="sample-list" class="sample-list" aria-label="Example charts"></div>
       <div class="sidebar-note"><span class="tiny-dot"></span>Made for the demo<p>Self-authored examples. Every inspection runs on the image itself.</p></div>
       <div class="sidebar-bottom"><svg><use href="#i-eye"/></svg><span>Pixels. Evidence. Perspective.</span></div>
@@ -52,8 +52,8 @@
         <section class="analysis-panel" aria-label="Chart analysis">
           <div class="tabs" role="tablist" aria-label="Analysis view">
             <button id="tab-comparison" role="tab" aria-selected="true" aria-controls="view-comparison" data-view="comparison"><svg><use href="#i-chart"/></svg> Comparison</button>
-            <button id="tab-evidence" role="tab" aria-selected="false" aria-controls="view-evidence" data-view="evidence"><svg><use href="#i-scan"/></svg> Visual evidence</button>
-            <button id="tab-data" role="tab" aria-selected="false" aria-controls="view-data" data-view="data"><svg><use href="#i-file"/></svg> Recovered data</button>
+            <button id="tab-evidence" role="tab" tabindex="-1" aria-selected="false" aria-controls="view-evidence" data-view="evidence"><svg><use href="#i-scan"/></svg> Visual evidence</button>
+            <button id="tab-data" role="tab" tabindex="-1" aria-selected="false" aria-controls="view-data" data-view="data"><svg><use href="#i-file"/></svg> Recovered data</button>
           </div>
           <div class="view" id="view-comparison" role="tabpanel" aria-labelledby="tab-comparison">
             <div class="chart-pair">
@@ -69,7 +69,7 @@
           </div>
           <div class="view" id="view-data" role="tabpanel" aria-labelledby="tab-data" hidden>
             <div class="data-heading"><div><h2>The numbers in the image</h2><p>Estimates from bar endpoints and the calibrated axis.</p></div><button class="button small secondary" id="export-csv" disabled>Download CSV</button></div>
-            <div id="data-table"></div><p class="data-note">Category names use OCR and may contain reading errors. “Bar 1” indicates an unreadable label. Values are estimates, not the original source table.</p>
+            <div id="data-table"></div><p class="data-note" id="data-sensitivity"></p><p class="data-note">Category names use OCR and may contain reading errors. “Bar 1” indicates an unreadable label. Values are estimates, not the original source table.</p>
           </div>
           <div id="busy" class="busy"><span class="spinner"></span><div><strong>Examining the chart</strong><span>Measuring bars and reading the axis…</span></div></div>
         </section>
@@ -90,7 +90,7 @@
     </main>
   </div>
   <div id="drop-overlay" hidden><svg><use href="#i-upload"/></svg><h2>Drop a chart to inspect it.</h2><p>PNG, JPG, or WebP · 8 MB maximum</p></div>
-  <dialog id="method-dialog"><button class="close-dialog" aria-label="Close explanation">×</button><div class="eyebrow">BEHIND THE EVIDENCE</div><h2>How ChartCourt reads a chart.</h2><p>OpenCV isolates colored rectangular bars. Tesseract reads axis ticks. A linear fit converts the bar endpoints from pixel positions to numeric estimates.</p><ol><li><strong>Find the marks.</strong> Color masks, morphology, and contours isolate aligned bars.</li><li><strong>Read the scale.</strong> At least three consistent ticks establish the numeric axis.</li><li><strong>Look again when needed.</strong> An uncertain scale triggers an enlarged, contrast-adjusted OCR pass.</li><li><strong>Check and reconstruct.</strong> Supported charts are checked for a nonzero baseline and inverted direction. The recovered values are redrawn.</li></ol><div class="method-callout">The current version supports single-series, solid-color vertical bars on readable linear axes. Stacked bars, logarithmic scales, monochrome plots, and complex infographics may need review. An inverted or truncated axis is a design choice to examine, not proof of dishonesty.</div><p class="method-small">Demo images are self-authored. Published dataset evaluation and AWS / COOL deployment are still pending. This local version uses OpenCV 5 and does not require an AI API key.</p></dialog>
+  <dialog id="method-dialog"><button class="close-dialog" aria-label="Close explanation">×</button><div class="eyebrow">BEHIND THE EVIDENCE</div><h2>How ChartCourt reads a chart.</h2><p>OpenCV isolates colored or grayscale rectangular bars. Tesseract reads axis ticks. A linear fit converts the bar endpoints from pixel positions to numeric estimates.</p><ol><li><strong>Find the marks.</strong> Color and luminance masks, morphology, and contours isolate aligned solid bars.</li><li><strong>Read the scale.</strong> At least three consistent ticks must cover the full bar geometry. Supported notation includes currency, percentages, and k/M/B suffixes.</li><li><strong>Look again when needed.</strong> An uncertain or incomplete scale triggers a targeted, enlarged tick-column OCR pass.</li><li><strong>Check and reconstruct.</strong> Supported charts are checked for a nonzero baseline and inverted direction. The generated SVG geometry is then read back and verified against the recovered values.</li></ol><div class="method-callout">The current version supports positive, regularly spaced single-series vertical bars on a light background with readable linear axes. Stacked/grouped bars, logarithmic scales, and complex infographics need review. Pixel-fit ranges show sensitivity to measurement shifts, not statistical confidence. An inverted or truncated axis is a design choice to examine, not proof of dishonesty.</div><p class="method-small">Demo and regression images are self-authored. Published dataset evaluation and AWS / COOL deployment are still pending. This local version uses OpenCV 5 and does not require an AI API key.</p></dialog>
   <div id="toast" role="status" hidden></div>
 </body>
 </html>
