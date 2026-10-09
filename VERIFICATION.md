@@ -4,9 +4,11 @@ Verified locally on macOS with Python 3.13.6, OpenCV 5.0.0, and Tesseract 5.5.2.
 
 ## Automated checks
 
-`python -m pytest -q`: **50 passed**. Upstream Starlette/httpx and Matplotlib/Pyparsing deprecation warnings remain; no test failed.
+`python -m pytest -q`: **80 passed**. Upstream Starlette/httpx and Matplotlib/Pyparsing deprecation warnings remain; no test failed.
 
 Checks cover five self-authored demo fixtures, 15 independently rendered challenge cases, numerical recovery, a resized/compressed JPEG with a changed filename, removing the axis or baseline tick, blank images, invalid/oversized uploads, sample allowlisting, strict numeric parsing, source hashes, trace timings, mixed-unit/nonlinear tick rejection, missing OCR, image validation, escaped OCR text, corrupted reconstructions, evaluator correctness, and inspection concurrency limits.
+
+Upload-boundary tests additionally cover rejection before reading oversized declared bodies, chunked/underreported bodies, exact size boundaries, invalid/duplicate lengths, compressed request rejection, disconnect/timeout/cancellation cleanup, concurrent upload admission, one-file multipart shape, temporary-file closure, display-filename sanitization, private exception-message suppression, and security headers on early errors. Stream-level tests exercise the ASGI middleware directly; they do not establish reverse-proxy/network behavior under load.
 
 `python scripts/evaluate.py --suite all`: **20/20 cases met the decision, issue-type, bar-count, reconstruction, and numeric-error checks**. All 14 supported examples were reconstructed; all 6 unsupported/incomplete examples were referred for review. No clean example was flagged. The numeric-error limit is 1.5% of the largest absolute ground-truth value per supported case.
 

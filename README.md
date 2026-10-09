@@ -33,7 +33,7 @@ On Windows, use `py -3.13 -m venv .venv` and replace `.venv/bin/python` with `.v
 - Read-back verification of generated SVG bar count, order, baseline, and numerical heights before offering a reconstruction.
 - Original/reconstruction comparison, evidence overlays, recovered values table, inspection trace.
 - Downloadable reconstructed SVG, estimates CSV, and JSON inspection report with the original file's SHA-256 digest.
-- Upload validation, bounded OCR execution and inspection concurrency, no persistent upload storage.
+- Upload validation before multipart parsing, bounded upload/OCR execution and concurrency, safe failure messages, no persistent upload storage.
 - Responsive browser workspace and keyboard-accessible controls.
 
 ## Data flow
@@ -56,7 +56,7 @@ Image bytes → decode/resize → color + luminance bar geometry → axis crop O
 .venv/bin/python scripts/evaluate.py --suite all
 ```
 
-Tests run real OCR. The suite covers numerical recovery, a resized JPEG, erased axes/baseline ticks, grayscale and currency charts, fractional values, small nonzero or uncertain baselines, unsupported layouts, malformed uploads, and reconstruction integrity. The local suite has **50 passing tests**; see [VERIFICATION.md](VERIFICATION.md) for checks and outstanding validation.
+Tests run real OCR. The suite covers numerical recovery, a resized JPEG, erased axes/baseline ticks, grayscale and currency charts, fractional values, small nonzero or uncertain baselines, unsupported layouts, malformed/streamed uploads, resource cleanup, and reconstruction integrity. The local suite has **80 passing tests**; see [VERIFICATION.md](VERIFICATION.md) for checks and outstanding validation.
 
 The evaluator offers `--suite demo` (5 Matplotlib images), `--suite stress` (15 independently rendered Pillow cases), and `--suite all`. It checks the specific issue, recovered bar count, numerical error, and whether reconstruction should be withheld. It reports reconstruction coverage, unsupported refusal rate, and false flags on clean charts, and exits nonzero on a regression. These cases were used during development: they are **not a held-out or public-dataset accuracy benchmark**.
 

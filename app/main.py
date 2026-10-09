@@ -1,20 +1,26 @@
 from pathlib import Path
 import json
+import logging
 import os
 import shutil
+import unicodedata
 from threading import Semaphore
 
 import cv2
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
+from starlette.datastructures import UploadFile
 
+from app.upload_limits import MAX_UPLOAD, UploadLimitsMiddleware
 from app.vision import InvalidImage, analyze
 
 STATIC = Path(__file__).parent / "static"
-MAX_UPLOAD = 8 * 1024 * 1024
 WORKERS = Semaphore(2)
+logger = logging.getLogger(__name__)
 app = FastAPI(title="ChartCourt", version="0.2.0", description="An evidence-led visual audit for chart axes.")
+app.add_middleware(UploadLimitsMiddleware)
 
 
 @app.middleware("http")
@@ -45,23 +51,45 @@ def samples():
 
 def run_analysis(raw: bytes, name: str):
     if not WORKERS.acquire(blocking=False):
-        raise HTTPException(429, "Two inspections are already running. Please retry in a moment.")
+        raise HTTPException(429, "Two inspections are already running. Please retry in a moment.", headers={"Retry-After": "2"})
     try:
         result = analyze(raw, name)
         result["engine"]["deployment"] = os.getenv("CHARTCOURT_DEPLOYMENT", "local")
         return result
     except InvalidImage as exc:
         raise HTTPException(422, str(exc)) from exc
+    except Exception as exc:
+        # Exceptions can contain paths, OCR text, or user data. Log only the type.
+        logger.error("Inspection failed (%s)", type(exc).__name__)
+        raise HTTPException(500, "Inspection failed. Please retry with another image.") from None
     finally:
         WORKERS.release()
 
 
-@app.post("/api/analyze")
-def inspect(file: UploadFile = File(...)):
-    raw = file.file.read(MAX_UPLOAD + 1)
-    if len(raw) > MAX_UPLOAD:
-        raise HTTPException(413, "Use an image smaller than 8 MB.")
-    return run_analysis(raw, Path(file.filename or "chart.png").name)
+def display_filename(filename: str | None) -> str:
+    """Keep a short display name, never client directory paths or controls."""
+    name = (filename or "").replace("\\", "/").rsplit("/", 1)[-1]
+    name = "".join(c for c in name if not unicodedata.category(c).startswith("C")).strip()
+    return name[:120] if name and name not in {".", ".."} else "chart.png"
+
+
+@app.post("/api/analyze", openapi_extra={"requestBody": {
+    "required": True, "content": {"multipart/form-data": {"schema": {
+        "type": "object", "required": ["file"], "additionalProperties": False,
+        "properties": {"file": {"type": "string", "format": "binary"}},
+    }}},
+}})
+async def inspect(request: Request):
+    # Restrict multipart shape as well as total bytes. The context closes every
+    # parsed file even when validation, decoding, or analysis raises an error.
+    async with request.form(max_files=1, max_fields=0) as form:
+        file = form.get("file")
+        if not isinstance(file, UploadFile):
+            raise HTTPException(422, "Choose one image in the file field.")
+        raw = await file.read(MAX_UPLOAD + 1)
+        if len(raw) > MAX_UPLOAD:
+            raise HTTPException(413, "Use an image up to 8 MB.")
+        return await run_in_threadpool(run_analysis, raw, display_filename(file.filename))
 
 
 @app.post("/api/samples/{sample_id}/analyze")
