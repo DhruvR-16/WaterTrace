@@ -33,7 +33,7 @@
   <div class="layout">
     <aside class="sidebar">
       <button class="button primary new-chart" id="upload-sidebar"><svg><use href="#i-plus"/></svg> New inspection</button>
-      <div class="sidebar-label">EXAMPLE CASES <span id="sample-count">05</span></div>
+      <div class="sidebar-label">EXAMPLE CASES <span id="sample-count">06</span></div>
       <div id="sample-list" class="sample-list" aria-label="Example charts"></div>
       <div class="sidebar-note"><span class="tiny-dot"></span>Made for the demo<p>Self-authored examples. Every inspection runs on the image itself.</p></div>
       <div class="sidebar-bottom"><svg><use href="#i-eye"/></svg><span>Pixels. Evidence. Perspective.</span></div>
@@ -64,7 +64,7 @@
             <div id="comparison-metrics" class="comparison-metrics"></div>
           </div>
           <div class="view" id="view-evidence" role="tabpanel" aria-labelledby="tab-evidence" hidden>
-            <div class="evidence-intro"><p>Follow each measurement back to the image.</p><span><i class="key bar-key"></i> Bars <i class="key tick-key"></i> Axis ticks</span></div>
+            <div class="evidence-intro"><p>Follow each measurement back to the image.</p><span><i class="key bar-key"></i> Bars <i class="key tick-key"></i> Axis ticks <i class="key category-key"></i> Category text</span></div>
             <div class="evidence-image" id="evidence-image"></div>
             <p class="evidence-help">Hover or focus a marked region to see what was read.</p>
           </div>
@@ -91,7 +91,7 @@
     </main>
   </div>
   <div id="drop-overlay" hidden><svg><use href="#i-upload"/></svg><h2>Drop a chart to inspect it.</h2><p>PNG, JPG, or WebP · 8 MB maximum</p></div>
-  <dialog id="method-dialog"><button class="close-dialog" aria-label="Close explanation">×</button><div class="eyebrow">BEHIND THE EVIDENCE</div><h2>How ChartCourt reads a chart.</h2><p>OpenCV isolates colored or grayscale rectangular bars. Tesseract reads axis ticks. A linear fit converts the bar endpoints from pixel positions to numeric estimates.</p><ol><li><strong>Find the marks.</strong> Color and luminance masks, morphology, and contours isolate aligned solid bars.</li><li><strong>Read the scale.</strong> At least three consistent ticks must cover the full bar geometry. Supported notation includes currency, percentages, and k/M/B suffixes.</li><li><strong>Look again when needed.</strong> An uncertain or incomplete scale triggers a targeted, enlarged tick-column OCR pass.</li><li><strong>Check and reconstruct.</strong> Supported charts are checked for a nonzero baseline and inverted direction. The generated SVG geometry is then read back and verified against the recovered values.</li></ol><div class="method-callout">The current version supports positive, regularly spaced single-series vertical bars on a light background with readable linear axes. Stacked/grouped bars, logarithmic scales, and complex infographics need review. Pixel-fit ranges show sensitivity to measurement shifts, not statistical confidence. An inverted or truncated axis is a design choice to examine, not proof of dishonesty.</div><p class="method-small">Demo and regression images are self-authored. Published dataset evaluation and AWS / COOL deployment are still pending. This local version uses OpenCV 5 and does not require an AI API key.</p></dialog>
+  <dialog id="method-dialog"><button class="close-dialog" aria-label="Close explanation">×</button><div class="eyebrow">BEHIND THE EVIDENCE</div><h2>How ChartCourt reads a chart.</h2><p>OpenCV isolates colored or grayscale rectangular bars. Tesseract reads axis ticks. A linear fit converts the bar endpoints from pixel positions to numeric estimates.</p><ol><li><strong>Find the marks.</strong> Color and luminance masks, morphology, and contours isolate aligned solid bars.</li><li><strong>Read the scale.</strong> At least three consistent ticks must cover the full bar geometry. Supported notation includes currency, percentages, and k/M/B suffixes.</li><li><strong>Look again when needed.</strong> An uncertain or incomplete scale triggers a targeted, enlarged tick-column OCR pass.</li><li><strong>Cross-check categories.</strong> Readable labels without a corresponding bar may reveal missing or zero-height marks. Their values are not guessed; reconstruction is withheld.</li><li><strong>Check and reconstruct.</strong> Supported charts are checked for a nonzero baseline and inverted direction. The generated SVG geometry is then read back and verified against the recovered values.</li></ol><div class="method-callout">The current version supports positive, regularly spaced single-series vertical bars on a light background with readable linear axes. Stacked/grouped bars, logarithmic scales, and complex infographics need review. Category checks cannot establish completeness when labels are unreadable or rotated. Pixel-fit ranges show sensitivity to measurement shifts, not statistical confidence. An inverted or truncated axis is a design choice to examine, not proof of dishonesty.</div><p class="method-small">Demo and regression images are self-authored. Published dataset evaluation and AWS / COOL deployment are still pending. This local version uses OpenCV 5 and does not require an AI API key.</p></dialog>
   <div id="toast" role="status" hidden></div>
 </body>
 </html>

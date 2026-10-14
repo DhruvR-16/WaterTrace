@@ -49,6 +49,9 @@ def main():
         dict(id="grayscale", name="Beyond color", subtitle="A grayscale chart inspected through luminance.",
              title="Orders fulfilled, by region", values=[32, 47, 56, 71], labels=["North", "South", "East", "West"],
              limits=[0, 80], ticks=[0, 20, 40, 60, 80], ylabel="Orders", color="#555555", expected="clear"),
+        dict(id="vanishing", name="The vanishing value", subtitle="A category with no measurable bar must not disappear.",
+             title="Orders fulfilled, by region", values=[0, 44, 61, 78], labels=["North", "South", "East", "West"],
+             limits=[0, 100], ticks=[0, 20, 40, 60, 80, 100], ylabel="Orders", expected="review", expected_issue="incomplete_categories"),
     ]
     for spec in specs:
         opts = {k: spec[k] for k in ("values", "labels", "limits", "title", "ticks")}

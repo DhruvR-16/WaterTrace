@@ -29,7 +29,10 @@ def test_known_chart_pixels(fixture):
     if expected == "review":
         assert result["status"] == "review"
         assert result["reconstruction"] is None
-        assert any(t["action"] == "Reinspect axis crop" for t in result["trace"])
+        if fixture["id"] == "unreadable":
+            assert any(t["action"] == "Reinspect axis crop" for t in result["trace"])
+        if fixture.get("expected_issue"):
+            assert fixture["expected_issue"] in {f["kind"] for f in result["findings"]}
         assert result["trace"][-1]["action"] == "Request human review"
     else:
         assert result["status"] == ("clear" if expected == "clear" else "flagged")

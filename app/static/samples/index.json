@@ -23,5 +23,10 @@
     "id": "grayscale",
     "name": "Beyond color",
     "subtitle": "A grayscale chart inspected through luminance."
+  },
+  {
+    "id": "vanishing",
+    "name": "The vanishing value",
+    "subtitle": "A category with no measurable bar must not disappear."
   }
 ]
