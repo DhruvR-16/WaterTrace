@@ -10,7 +10,7 @@
 2. Open **Visual evidence** and the inspection trace. Point to the actual bar boxes, axis ticks, category labels, and pixel-to-value calibration.
 3. Inspect **The vanishing value**. Show why a missing bar does not justify silently deleting its category or inventing a zero. The app withholds numeric/SVG exports while retaining the evidence report.
 4. Run `python -m app.cli` on a supported chart and a flagged chart. Explain its exit-code contract, explicit inputs, bounded reads, and no-overwrite reports.
-5. Show a real passing GitHub Actions run and the verification report. State clearly which results are synthetic and what remains unverified.
+5. Show the verification report and local test results. Once hosted CI can run and actually passes, show that run too. The first hosted attempt was blocked before execution; the workflow definition alone does not demonstrate a passing build. State clearly which results are synthetic and what remains unverified.
 
 ## Resume wording to adapt
 

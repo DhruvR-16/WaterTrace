@@ -44,7 +44,9 @@ Category UI checks: **The vanishing value** showed three detected marks and four
 
 ## CI and container status
 
-The repository now includes a SHA-pinned, read-only-permission GitHub Actions workflow for Linux tests, synthetic evaluation, CLI execution, and a non-root read-only-filesystem container smoke test. The local Docker daemon is unavailable, so local container execution was not performed. The first hosted workflow result is pending verification; no successful container run is claimed here yet.
+The repository includes a SHA-pinned, read-only-permission GitHub Actions workflow for Linux tests, synthetic evaluation, CLI execution, and a non-root read-only-filesystem container smoke test. The local Docker daemon is unavailable, so local container execution was not performed.
+
+The [first hosted run](https://github.com/DhruvR-16/opencv_hackathon/actions/runs/38513256980) on October 14, 2026 was blocked by an account-level Actions restriction before any job steps started. This is neither a test failure nor a passing CI result. The repository owner must resolve that restriction and rerun the workflow before claiming Linux/container verification. No account settings were changed, and no successful container run is claimed here.
 
 ## Not yet verified
 
