@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import shutil
-import unicodedata
 from threading import Semaphore
 
 import cv2
@@ -14,12 +13,13 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 
 from app.upload_limits import MAX_UPLOAD, UploadLimitsMiddleware
+from app.privacy import display_filename
 from app.vision import InvalidImage, analyze
 
 STATIC = Path(__file__).parent / "static"
 WORKERS = Semaphore(2)
 logger = logging.getLogger(__name__)
-app = FastAPI(title="ChartCourt", version="0.2.0", description="An evidence-led visual audit for chart axes.")
+app = FastAPI(title="ChartCourt", version="0.3.0", description="An evidence-led visual audit for chart axes.")
 app.add_middleware(UploadLimitsMiddleware)
 
 
@@ -64,13 +64,6 @@ def run_analysis(raw: bytes, name: str):
         raise HTTPException(500, "Inspection failed. Please retry with another image.") from None
     finally:
         WORKERS.release()
-
-
-def display_filename(filename: str | None) -> str:
-    """Keep a short display name, never client directory paths or controls."""
-    name = (filename or "").replace("\\", "/").rsplit("/", 1)[-1]
-    name = "".join(c for c in name if not unicodedata.category(c).startswith("C")).strip()
-    return name[:120] if name and name not in {".", ".."} else "chart.png"
 
 
 @app.post("/api/analyze", openapi_extra={"requestBody": {
