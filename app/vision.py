@@ -361,13 +361,14 @@ def analyze(raw: bytes, filename: str = "chart.png") -> dict:
         crop_left = max(0, min(t["box"][0] for t in ticks)-12) if ticks else 0
         crop_right = min(x1, max(t["box"][0]+t["box"][2] for t in ticks)+8) if ticks else x1
         gray = cv2.cvtColor(image[y0:y1, crop_left:crop_right], cv2.COLOR_BGR2GRAY)
-        enlarged = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+        retry_scale = 3 if ticks and np.median([t["box"][3] for t in ticks]) < 18 else 2
+        enlarged = cv2.resize(gray, None, fx=retry_scale, fy=retry_scale, interpolation=cv2.INTER_CUBIC)
         # Contrast enhancement can harm already-crisp small glyphs. Apply it
         # only when the observed crop actually has a narrow intensity range.
         low_contrast = int(np.max(gray))-int(np.min(gray)) < 60
         enhanced = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(enlarged) if low_contrast else enlarged
         try:
-            retry_words = ocr(enhanced, offset=(crop_left, y0), scale=2, psm=6)
+            retry_words = ocr(enhanced, offset=(crop_left, y0), scale=retry_scale, psm=6)
             retry_ticks = axis_ticks(retry_words, w)
             retry_fit = fit_axis(retry_ticks)
             def evidence_rank(candidate_fit, candidate_ticks):
@@ -376,7 +377,7 @@ def analyze(raw: bytes, filename: str = "chart.png") -> dict:
                 ticks, fit = retry_ticks, retry_fit
         except (pytesseract.TesseractNotFoundError, RuntimeError):
             trace("read_axis_detail", "OCR time limit", "The additional crop inspection did not complete within the time limit.")
-        trace("read_axis_detail", "Resolve axis evidence", f"Axis now has {len(ticks)} usable ticks.", {"ticks": [t["value"] for t in ticks], "contrast_enhanced": low_contrast})
+        trace("read_axis_detail", "Resolve axis evidence", f"Axis now has {len(ticks)} usable ticks.", {"ticks": [t["value"] for t in ticks], "contrast_enhanced": low_contrast, "enlargement": retry_scale})
     if fit is None or fit[2] > .025 or not ticks_cover_bars(ticks, bars):
         findings.append(dict(kind="unreadable_axis", severity="review", title="A reliable scale is missing",
                              detail="At least three consistent numeric ticks covering the full bars are required. A missing, nonlinear, unreadable, or incomplete scale prevents reconstruction.", evidence=ticks))

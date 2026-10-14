@@ -22,6 +22,15 @@ def test_exif_orientation_is_normalized_before_geometry():
     assert np.mean(np.abs(decoded.astype(float)-decode_image(original).astype(float))) < 2
 
 
+@pytest.mark.parametrize("name,raw", list(variants(chart_bytes([22, 44, 61, 78]))))
+def test_small_tick_retry_recovers_supported_image_variants(name, raw):
+    result = analyze(raw)
+    case = {"id": name, "expected": "clear", "values": [22, 44, 61, 78]}
+    assert score_variant(case, result)["correct"], result["findings"]
+    retries = [t for t in result["trace"] if t["tool"] == "read_axis_detail" and "enlargement" in t["metrics"]]
+    assert retries and retries[-1]["metrics"]["enlargement"] == 3
+
+
 def test_variant_scorer_distinguishes_refusal_from_reconstruction():
     case = {"id": "sample", "expected": "clear", "values": [10, 20]}
     result = {"status": "review", "bars": [], "findings": [], "reconstruction": None, "processing_ms": 1, "trace": []}

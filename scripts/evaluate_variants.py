@@ -48,7 +48,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=("demo", "stress", "all"), default="demo")
     parser.add_argument("--summary", action="store_true", help="Omit per-case records, retaining failures and coverage.")
+    parser.add_argument("--min-supported-coverage", type=float, default=0, help="Fail below this supported recovery fraction (0–1), even if refusals are safe.")
     args = parser.parse_args()
+    if not 0 <= args.min_supported_coverage <= 1:
+        parser.error("--min-supported-coverage must be between 0 and 1")
     selected = list(demo_cases()) if args.suite in {"demo", "all"} else []
     if args.suite in {"stress", "all"}:
         from scripts.stress_cases import cases
@@ -79,8 +82,11 @@ def main():
     )
     if not args.summary:
         report["cases"] = records
+    rate = report["supported_reconstruction_rate"]
+    report["minimum_supported_coverage"] = args.min_supported_coverage
+    report["coverage_passed"] = rate >= args.min_supported_coverage if rate is not None else args.min_supported_coverage == 0
     print(json.dumps(report, indent=2))
-    return 0 if all(r["safe"] for r in records) else 1
+    return 0 if all(r["safe"] for r in records) and report["coverage_passed"] else 1
 
 
 if __name__ == "__main__":
