@@ -187,6 +187,8 @@ def summarize_zones(raster, classes, collection=None, new_water=None, persistent
             if not polygon.is_valid or polygon.area <= 0 or not box(0,0,w,h).intersects(polygon):
                 raise ValueError()
             properties = feature.get("properties", {})
+            if not isinstance(properties, dict):
+                raise ValueError()
             identifier = str(properties.get("id", f"zone-{index+1}"))[:80]
             if identifier in ids:
                 raise ValueError()
