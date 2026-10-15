@@ -1,6 +1,17 @@
 # Security and privacy
 
-ChartCourt is a local hackathon MVP, not a hardened multi-tenant service.
+FieldWatch is a local research prototype, not a hardened multi-tenant service. The older ChartCourt runtime remains in `app/`; its boundaries below are marked separately.
+
+## FieldWatch runtime boundaries
+
+- Bind to `127.0.0.1`; the app allowlists localhost hosts and rejects cross-origin POSTs. There is no authentication, multi-user isolation or permission model. Do not expose it publicly or bind it to a LAN interface without a separate security review.
+- Only trusted two-band GeoTIFF bytes are accepted; VRTs, archives and arbitrary remote URLs are not supported. Limits: 24 MiB/file, 49 MiB/request, 2 million raster pixels, 100 zones, 200 vertices/polygon, 200 KB GeoJSON and two in-process analyses. Limits do not bound total native GDAL/OpenCV memory or execution time.
+- Upload requests are limited before parsing, including streamed bodies. Duplicate/conflicting lengths and compressed requests are rejected. The body-read deadline is 30 seconds. Disconnect/cancellation releases request admission. The browser's stop-waiting button does not terminate a native analysis already running.
+- No external inference, map tiles, fonts, analytics or cloud API calls occur during local analysis. The explicit dataset-download script uses public HTTPS with certificate verification. The application does not read `.env` or cloud credentials.
+- GDAL/Rasterio is not sandboxed. GeoTIFF validation is not a guarantee against native decoder vulnerabilities or pathological computation. Use process isolation, CPU/memory/time limits and dependency auditing before accepting untrusted public uploads.
+- No intentional server-side retention: multipart files can spool temporarily to disk and are closed after processing. Reports and previews remain in browser memory. Exported locations, dates, source digests and reviewer notes may be sensitive even without pixel payloads; protect downloaded files.
+- CLI reports use exclusive creation and POSIX mode `0600`. Browser download permissions depend on the browser/OS. Review notes are unverified human content, distinct from algorithmic evidence; text is inserted with DOM text APIs rather than HTML.
+- Unexpected analysis errors return generic messages and log exception type only. CSP restricts scripts/styles to the app and images to local/data sources; frame embedding is denied. These controls are defense in depth, not a public-hosting certification.
 
 ## Keep private data out of Git
 
@@ -10,7 +21,7 @@ ChartCourt is a local hackathon MVP, not a hardened multi-tenant service.
 - The repository excludes local environments, common credential files, datasets, upload folders, caches, and generated artifacts. The Docker build context allowlists the application and runtime dependency file, with additional exclusions for common nested secrets.
 - If a credential is accidentally committed, revoke or rotate it immediately. Removing it from the latest file does not remove it from Git history. Coordinate any history rewrite with collaborators.
 
-## Runtime boundaries
+## Legacy ChartCourt runtime boundaries
 
 - Run the development service on `127.0.0.1`. The README's container example binds the published port to loopback as well.
 - PNG, JPEG, and WebP inputs are decoded and inspected; file extensions alone are not trusted. The analysis endpoint rejects files above 8 MiB, images above 20 megapixels, and undersized images.

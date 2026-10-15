@@ -1,4 +1,4 @@
-name: Verify ChartCourt
+name: Verify FieldWatch
 
 on:
   push:
@@ -14,11 +14,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  tests-and-container:
+  local-contracts-and-container:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      MPLBACKEND: Agg
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -28,44 +27,26 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
+          cache-dependency-path: requirements-fieldwatch*.txt
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
-      - name: Install OCR and dependencies
+      - name: Install pinned dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends tesseract-ocr
-          python -m pip install -r requirements-dev.txt
+          python -m pip install -r requirements-fieldwatch-dev.txt
           python -m pip check
-          tesseract --version
-      - name: Python and frontend regression tests
+      - name: Synthetic contract and frontend tests
         run: |
-          python -m pytest -q
-          node --check app/static/app.js
-          node --check app/static/network.js
-          node --test tests/network.test.cjs
-      - name: Evaluate synthetic charts and transformations
+          python -m pytest -q tests/test_fieldwatch.py
+          node --check fieldwatch/static/app.js
+          node --check fieldwatch/static/model.js
+          node --test tests/fieldwatch.test.cjs
+      - name: Build and smoke-test local-only container
         run: |
-          mkdir -p artifacts
-          python scripts/evaluate.py --suite all > artifacts/evaluation.json
-          python scripts/evaluate_variants.py --suite all --summary --min-supported-coverage 0.95 > artifacts/variants.json
-          python -m app.cli app/static/samples/honest.png --output artifacts/cli-report.json --fail-on-findings
-      - name: Build and smoke-test the runtime container
-        run: |
-          docker build -t chartcourt:ci .
-          docker run -d --rm --name chartcourt-ci --read-only --tmpfs /tmp:rw,nosuid,size=128m --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8000:8000 chartcourt:ci
-          curl --fail --retry 15 --retry-delay 1 --retry-connrefused http://127.0.0.1:8000/api/health -o artifacts/container-health.json
-          curl --fail http://127.0.0.1:8000/api/analyze -F 'file=@app/static/samples/truncated.png' -o artifacts/container-inspection.json
-          python -c 'import json; h=json.load(open("artifacts/container-health.json")); r=json.load(open("artifacts/container-inspection.json")); assert h["ocr_available"] and h["opencv"].startswith("5."); assert r["status"] == "flagged" and len(r["bars"]) == 4'
-          test "$(docker exec chartcourt-ci id -u)" != "0"
+          docker build -t fieldwatch:ci .
+          docker run -d --rm --name fieldwatch-ci --read-only --tmpfs /tmp:rw,nosuid,size=128m --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8000:8000 fieldwatch:ci
+          python scripts/smoke_fieldwatch.py
+          test "$(docker exec fieldwatch-ci id -u)" != "0"
       - name: Stop test container
         if: always()
-        run: docker stop chartcourt-ci || true
-      - name: Save synthetic evaluation reports
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: chartcourt-verification
-          path: artifacts/*.json
-          if-no-files-found: ignore
-          retention-days: 7
+        run: docker stop fieldwatch-ci || true

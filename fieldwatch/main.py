@@ -72,7 +72,7 @@ def execute(raw, **kwargs):
 def parse_zones(text):
     if not text:
         return None
-    if len(text) > 200_000:
+    if len(text.encode('utf-8')) > 200_000:
         raise HTTPException(413, "Zone GeoJSON exceeds 200 KB.")
     try:
         return json.loads(text)

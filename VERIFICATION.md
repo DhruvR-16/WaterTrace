@@ -1,4 +1,6 @@
-# v0.3 verification
+# ChartCourt v0.3 verification — archived predecessor
+
+These results do not describe FieldWatch. See [FieldWatch benchmark](docs/FIELDWATCH_BENCHMARK.md) and [readiness](docs/FIELDWATCH_READINESS.md) for the current project.
 
 Verified locally on macOS with Python 3.13.6, OpenCV 5.0.0, and Tesseract 5.5.2.
 

@@ -222,6 +222,13 @@ def test_nonlocal_host_is_rejected():
         assert client.get('/api/health',headers={'Host':'untrusted.example'}).status_code==400
 
 
+def test_geojson_limit_counts_utf8_bytes():
+    from fieldwatch.main import parse_zones
+    from fastapi import HTTPException
+    with pytest.raises(HTTPException) as error:parse_zones('水'*70_000)
+    assert error.value.status_code==413
+
+
 def test_cli_private_no_overwrite(tmp_path):
     from fieldwatch.cli import main
     source=tmp_path/'input.tif';source.write_bytes(tif())

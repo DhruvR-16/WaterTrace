@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const M = window.FieldWatchModel;
-const state = {report:null,example:null,upload:null,zones:null,reviews:{},selected:null,filter:'all',controller:null,drawing:false,points:[]};
+const state = {report:null,example:null,upload:null,zones:null,reviews:Object.create(null),selected:null,filter:'all',controller:null,drawing:false,points:[]};
 const number = value => new Intl.NumberFormat('en',{maximumFractionDigits:1}).format(value);
 const percent = value => `${Math.round(value*100)}%`;
 function element(tag, text, className) {const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;}
@@ -13,7 +13,7 @@ function busy(active) {
   $('draw-button').disabled=active || !state.report || state.report.source.crs!=='EPSG:4326';
 }
 function clearReport() {
-  state.report=null;state.selected=null;state.reviews={};state.filter='all';
+  state.report=null;state.selected=null;state.reviews=Object.create(null);state.filter='all';
   ['water-value','unknown-value','coverage-value','date-value'].forEach(id=>$(id).textContent='—');
   $('map-stack').hidden=true;$('map-placeholder').hidden=false;$('zone-detail').hidden=true;
   $('zone-list').replaceChildren(element('p','Analysis in progress…','empty'));$('trace').replaceChildren();$('timeline').replaceChildren();
