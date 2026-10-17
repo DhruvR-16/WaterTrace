@@ -1,4 +1,4 @@
-# FieldWatch readiness — 15 October 2026
+# FieldWatch readiness — 17 October 2026
 
 ## Working local scope
 
@@ -7,16 +7,19 @@
 - Bounded single/pair GeoTIFF upload, dates and grid guards; same engine exposed by CLI.
 - Deterministic policy, separate evaluator, source hashes, baseline and per-event error reporting.
 - Synthetic unit/integration tests and Node model tests; no network needed for those tests.
+- India-first library and Evidence Lab: four disclosed selected real replays, eight generated hard-case exercises, reference/error maps and explicit whole-field review gates. No geographic accuracy improvement is claimed.
 
 The Sites local-preview guidance informed browser verification and responsive layout. This Python/raster application was not published through Sites.
 
 ## Local verification record
 
-- Native Python suite passed, including the preserved ChartCourt regressions. FieldWatch-specific coverage includes raster/GeoJSON admission, explicit unknowns, pair metadata/alignment, geographic area accounting, rejected-scene benchmark scoring, upload limits, host/origin guards and private CLI exports.
-- Seven FieldWatch frontend-model tests passed; the 19 preserved ChartCourt network tests also passed.
+- Native Python suite: **200 passed**, including 76 FieldWatch and 124 preserved ChartCourt tests. FieldWatch coverage includes raster/GeoJSON admission, explicit unknowns, pair metadata/alignment, geographic area accounting, rejected-scene benchmark scoring, upload limits, host/origin guards, private CLI exports, lab routes and reference-label independence.
+- Nine FieldWatch frontend-model tests passed; the 19 preserved ChartCourt network tests also passed. Small positive reported areas display as `<0.1 ha`, not zero; raster labels scale with image dimensions.
+- All eight executable synthetic lab exercises passed. The 90-chip regression reproduced all original case hashes/counts, event metrics and pooled scores exactly; this is regression evidence on exposed data, not new blind validation.
 - Live HTTP smoke test passed against the local server: synthetic GeoTIFF decoding, water result, invalid-input rejection and untrusted-host rejection.
 - Browser checks passed for real India GeoTIFF upload; custom polygon drawing and reanalysis; GeoJSON import with a rice-context warning; uncertainty filtering; saved review; downloaded JSON without images; synthetic paired upload; earlier-layer switching; and 96×64 image/overlay aspect-ratio preservation.
 - Responsive check at 390×844 showed no horizontal overflow. Normal desktop browser rendering was inspected; no console errors/warnings were reported in the tested flows.
+- Evidence Lab browser checks passed for India and Sri Lanka metrics, isolated reference/error layers, four-pixel and paddy gates, shifted-grid rejection after a real result (no stale map/metrics/export), image-free lab JSON with disclosures, return to ordinary India analysis, and mobile library/report layouts. No console warnings/errors were recorded in these flows.
 - A **synthetic** paired-raster UI test confirms the comparison interface, not real flood-change accuracy. No equivalent real-pair validation has been completed.
 - Direct dependency consistency check passed. Upstream Starlette/httpx and legacy Matplotlib deprecation warnings remain. This is not a dependency vulnerability audit.
 
@@ -55,7 +58,7 @@ Explain the precision/recall trade-off and failure cases in an interview. Do not
 2. Explain blue water evidence versus amber unknowns; select a zone with substantial uncertainty.
 3. Filter the uncertainty queue, add a clearly labeled reviewer note, export the evidence JSON.
 4. Draw/import a review zone and show how pixel accounting changes without pretending it is a verified farm.
-5. Show the benchmark, including weaker recall and the Pakistan/Sri Lanka failures.
+5. Open Evidence Lab: compare stronger India overlap with Sri Lanka's high precision but very low recall; switch to the error map. Run the tiny-field and shifted-grid exercises. Follow the [showcase guide](FIELDWATCH_SHOWCASE.md).
 6. Finish with the real-pair, agricultural-context and AWS work still needed—not an unearned reliability claim.
 
 ## Environment limits

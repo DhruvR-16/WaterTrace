@@ -10,6 +10,8 @@ Help a cooperative or NGO reviewer separate (1) areas with water-like evidence, 
 |---|---|
 | `fieldwatch/engine.py` | Bounded GeoTIFF decoding, georeferencing, classification, pair alignment, polygon summaries |
 | `fieldwatch/service.py` | Source hashes, dates, trace, PNG overlays and structured reports |
+| `fieldwatch/decisions.py` | Versioned field-review gates; independent of frozen pixel classification |
+| `fieldwatch/lab.py` | Allowlisted selected replays, post-inference reference scoring, synthetic contract exercises |
 | `fieldwatch/main.py` / `limits.py` | Local API, multipart validation, admission and body limits, privacy-safe errors |
 | `fieldwatch/catalog.py` | Three allowlisted historical examples and optical previews |
 | `fieldwatch/static/` | Buildless UI, map/zone selection, drawing/import, in-memory human review and JSON export |
@@ -34,12 +36,16 @@ PROJ converts geographic polygons to the input grid. Shapely validates simple ex
 
 Default zones are an explicitly illustrative 3×3 grid. Real field ownership, crop type and crop boundaries are not inferred. Under-25-pixel zones, over-30%-unknown zones, clipped zones and rice/paddy context receive caution reasons. Water at or above 5% of the overlap sends a zone to the water queue; otherwise uncertainty/context issues send it to uncertainty review. The 5% threshold is a workflow heuristic, not a proven agronomic threshold. High-water zones may still have substantial uncertainty; both values remain visible.
 
+The additive `review-gates-v1` decision distinguishes a pixel measurement from a whole-field interpretation. Insufficient resolution/coverage takes precedence, followed by explicit rice/paddy context, repeated water without new candidates, water candidates and low signal. It always withholds crop-damage, water-depth, continuous-duration and access-safety claims. Engine reasons preserve an insufficient-coverage gate even if display rounding reaches 70%. This is a review policy, not a calibrated confidence model; the original water/uncertainty queue remains a signal index, not an actionable clearance.
+
 ## Contracts
 
 - `GET /api/health`: readiness, OpenCV version, local/container label, no COOL claim.
 - `GET /api/examples`: allowlisted examples and local availability.
 - `POST /api/examples/{id}/analyze`: optional GeoJSON body; no arbitrary paths/URLs.
 - `POST /api/analyze`: current TIFF; optional earlier TIFF; dates; same-orbit confirmation; optional GeoJSON.
+- `GET /api/lab`: fixed cases and local availability. `POST /api/lab/{id}/run`: fixed inputs only, no body or client-supplied paths. Uses the same two-slot admission limit as analysis. Missing real data returns actionable 503; unknown IDs return 404.
+- Lab reports add `lab` metadata and optional reference/error images after inference. Synthetic expected rejections return `kind: rejection_check` without images or summaries; the browser clears old results and disables export. Standard report export strips all preview images, retaining selection disclosures and reference provenance.
 - JSON schema version `1.0`: source/reference, summary, zones, policy, trace, limitations and PNG previews. Exports omit previews. Human reviews are added only by the client and never overwrite algorithmic findings.
 
 ## Deliberate trade-offs

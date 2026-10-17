@@ -23,7 +23,9 @@ Without downloading, upload your own **trusted, north-up, calibrated VV/VH dB Ge
 
 ## What you can do
 
-- Replay three actual historical observations from Spain, India, and the USA. Optical imagery is context only, not an inference input or cloud-screened truth.
+- Start with India, then replay actual historical observations from Spain and the USA. Optical imagery is context only, not an inference input or cloud-screened truth.
+- Open **Evidence Lab** for four selected real contrast cases from India, Pakistan and Sri Lanka, plus eight executable synthetic hard cases. Inspect reference labels and false-alarm/missed-water maps without feeding labels to inference.
+- Inspect field-level review gates: insufficient resolution/coverage, rice/paddy context, repeat observations, water candidates and low signal. These gates do not certify safe or damaged fields.
 - Inspect OpenCV-derived water evidence, uncertain pixels, and geographic review zones.
 - Draw zones on EPSG:4326 imagery, or import longitude/latitude GeoJSON for any supported raster CRS. Polygons are user-provided, not inferred farm boundaries.
 - Compare an earlier/current pair on the exact same CRS, grid, and dimensions after confirming matching orbit, direction, polarization, and calibration. Report new-water candidates separately from water seen at both dates. **Two dates never imply continuous duration.**
@@ -31,6 +33,17 @@ Without downloading, upload your own **trusted, north-up, calibrated VV/VH dB Ge
 - Run the same pipeline through a local CLI. Original imagery is excluded from CLI/report exports; coordinates and notes may still be sensitive.
 
 Reviews exist only in the current page memory. **Export before changing observations, reanalyzing zones, refreshing, or closing.** The default 3×3 sectors are demonstration survey areas, not farms or a cropland mask. Included examples are single observations; real temporal-pair validation remains outstanding.
+
+## Regional hard-case showcase
+
+The scope is selected historical observations, not nationwide or worldwide monitoring. The Evidence Lab's eight synthetic exercises work without downloads. To enable its four real replays, download about 6.8 MB of radar, labels and metadata:
+
+```sh
+.venv/bin/python scripts/fetch_fieldwatch_data.py --split lab
+.venv/bin/python scripts/check_fieldwatch_lab.py
+```
+
+Open **Evidence Lab** in the top bar. Test missing earlier pixels, repeated water, paddy context, four-pixel fields, conflicting radar, shifted grids and all-NoData inputs. A rejection produces no map, queue or export. Synthetic success demonstrates software contracts, not flood-detection accuracy. Read the [showcase guide and selection disclosure](docs/FIELDWATCH_SHOWCASE.md).
 
 ## Evidence, not a headline accuracy score
 
@@ -47,7 +60,8 @@ The initial fixed policy was evaluated on all **90 chips in the Sen1Floods11 v1.
 
 ```sh
 .venv/bin/python -m pip install -r requirements-fieldwatch-dev.txt
-.venv/bin/python -m pytest -q tests/test_fieldwatch.py
+.venv/bin/python -m pytest -q tests/test_fieldwatch.py tests/test_fieldwatch_lab.py
+.venv/bin/python scripts/check_fieldwatch_lab.py
 node --test tests/fieldwatch.test.cjs
 .venv/bin/python scripts/fetch_fieldwatch_data.py --split test
 .venv/bin/python scripts/evaluate_fieldwatch.py --split test --output artifacts/my-evaluation.json
@@ -77,7 +91,8 @@ Trusted radar GeoTIFF(s) + dates + optional GeoJSON
   → geodesic areas + separate human-review queues
   → browser overlays, reviewer notes, provenance JSON
 
-Independent label rasters → offline evaluator only (not the application)
+Independent label rasters → evaluator / explicit Evidence Lab scoring AFTER inference
+                           (never classification or review-queue inputs)
 ```
 
 See [technical design](docs/FIELDWATCH_ARCHITECTURE.md), [security boundaries](SECURITY.md), and [competition / portfolio readiness](docs/FIELDWATCH_READINESS.md).

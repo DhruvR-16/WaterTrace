@@ -12,6 +12,7 @@ FieldWatch is a local research prototype, not a hardened multi-tenant service. T
 - No intentional server-side retention: multipart files can spool temporarily to disk and are closed after processing. Reports and previews remain in browser memory. Exported locations, dates, source digests and reviewer notes may be sensitive even without pixel payloads; protect downloaded files.
 - CLI reports use exclusive creation and POSIX mode `0600`. Browser download permissions depend on the browser/OS. Review notes are unverified human content, distinct from algorithmic evidence; text is inserted with DOM text APIs rather than HTML.
 - Unexpected analysis errors return generic messages and log exception type only. CSP restricts scripts/styles to the app and images to local/data sources; frame embedding is denied. These controls are defense in depth, not a public-hosting certification.
+- Evidence Lab accepts only allowlisted case IDs and no request body, arbitrary file path or remote URL. It shares analysis admission limits. Reference labels are read from explicit local dataset paths after inference, never used to select classifications or review decisions. Lab exports omit preview images but retain evaluation disclosures and reference digests. A synthetic rejection returns no usable report, and the UI clears the previous map and disables export.
 
 ## Keep private data out of Git
 
