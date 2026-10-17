@@ -1,6 +1,6 @@
 # Only the runtime dependencies and app belong in the build context.
 **
-!requirements-fieldwatch.txt
+!requirements.txt
 !fieldwatch/
 !fieldwatch/**
 

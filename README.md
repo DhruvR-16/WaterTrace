@@ -12,7 +12,7 @@ Python 3.13 is the tested version. From the repository root:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements-fieldwatch.txt
+.venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python scripts/fetch_fieldwatch_data.py --split demo
 .venv/bin/python -m uvicorn fieldwatch.main:app --host 127.0.0.1 --port 8000
 ```
@@ -59,8 +59,8 @@ The initial fixed policy was evaluated on all **90 chips in the Sen1Floods11 v1.
 ## Verify and reproduce
 
 ```sh
-.venv/bin/python -m pip install -r requirements-fieldwatch-dev.txt
-.venv/bin/python -m pytest -q tests/test_fieldwatch.py tests/test_fieldwatch_lab.py
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m pytest -q
 .venv/bin/python scripts/check_fieldwatch_lab.py
 node --test tests/fieldwatch.test.cjs
 .venv/bin/python scripts/fetch_fieldwatch_data.py --split test
@@ -111,4 +111,4 @@ docker run --rm --read-only --tmpfs /tmp:rw,nosuid,size=128m \
 
 Examples and evaluation use [Sen1Floods11](https://github.com/cloudtostreet/Sen1Floods11), Bonafilia, Tellman, Anderson & Issenberg (2020), Cloud to Street; contains modified Copernicus Sentinel data. Downloads are kept outside Git. The upstream repository's licensing/redistribution terms need confirmation before distributing its rasters or derived previews; public access alone is not a redistribution license. See [data provenance](docs/FIELDWATCH_DATA.md). The repository's code license does not grant rights to third-party data.
 
-This project replaces ChartCourt as the main direction. The previous code remains under `app/`, with a complete preserved snapshot at [`codex/chartcourt-v0.3`](https://github.com/DhruvR-16/opencv_hackathon/tree/codex/chartcourt-v0.3). Old ChartCourt architecture, verification, and portfolio documents describe that predecessor, not FieldWatch.
+This branch contains FieldWatch only. The previous ChartCourt project is recoverable from [`codex/chartcourt-v0.3`](https://github.com/DhruvR-16/opencv_hackathon/tree/codex/chartcourt-v0.3) and Git history; its app, samples, tests and documents are no longer included in `main`.

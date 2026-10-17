@@ -27,17 +27,17 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-          cache-dependency-path: requirements-fieldwatch*.txt
+          cache-dependency-path: requirements*.txt
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Install pinned dependencies
         run: |
-          python -m pip install -r requirements-fieldwatch-dev.txt
+          python -m pip install -r requirements-dev.txt
           python -m pip check
       - name: Synthetic contract and frontend tests
         run: |
-          python -m pytest -q tests/test_fieldwatch.py tests/test_fieldwatch_lab.py
+          python -m pytest -q
           python scripts/check_fieldwatch_lab.py
           node --check fieldwatch/static/app.js
           node --check fieldwatch/static/model.js

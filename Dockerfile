@@ -1,7 +1,7 @@
 FROM python:3.13-slim
 WORKDIR /app
-COPY requirements-fieldwatch.txt .
-RUN pip install --no-cache-dir -r requirements-fieldwatch.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 COPY fieldwatch ./fieldwatch
 RUN useradd --create-home --uid 10001 fieldwatch
 USER fieldwatch
