@@ -1,23 +1,27 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const M = window.FieldWatchModel;
-const state = {report:null,example:null,upload:null,zones:null,reviews:Object.create(null),selected:null,filter:'all',controller:null,drawing:false,points:[]};
+const state = {report:null,example:null,lab:null,upload:null,zones:null,reviews:Object.create(null),selected:null,filter:'all',controller:null,drawing:false,points:[]};
 const number = value => new Intl.NumberFormat('en',{maximumFractionDigits:1}).format(value);
 const percent = value => `${Math.round(value*100)}%`;
+const metricPercent = value => value===null?'N/A':`${(value*100).toFixed(1)}%`;
 function element(tag, text, className) {const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;}
 function svgElement(tag,attrs) {const el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [key,value]of Object.entries(attrs))el.setAttribute(key,String(value));return el;}
 function message(text) {$('message').textContent=text;$('message').hidden=!text;}
 function busy(active) {
   $('busy').hidden=!active;
-  document.querySelectorAll('.example,#upload-button,#export-button,#draw-button,#import-button').forEach(el=>el.disabled=active || (['export-button','draw-button','import-button'].includes(el.id)&&!state.report));
-  $('draw-button').disabled=active || !state.report || state.report.source.crs!=='EPSG:4326';
+  document.querySelectorAll('.example,.lab-card,#upload-button,#export-button,#draw-button,#import-button').forEach(el=>el.disabled=active || (['export-button','draw-button','import-button'].includes(el.id)&&!state.report));
+  $('draw-button').disabled=active || !!state.lab || !state.report || state.report.source.crs!=='EPSG:4326';
+  $('import-button').disabled=active || !!state.lab || !state.report;
 }
 function clearReport() {
   state.report=null;state.selected=null;state.reviews=Object.create(null);state.filter='all';
+  $('lab-result').hidden=true;$('lab-legend').hidden=true;$('normal-legend').hidden=false;
   ['water-value','unknown-value','coverage-value','date-value'].forEach(id=>$(id).textContent='—');
   $('map-stack').hidden=true;$('map-placeholder').hidden=false;$('zone-detail').hidden=true;
   $('zone-list').replaceChildren(element('p','Analysis in progress…','empty'));$('trace').replaceChildren();$('timeline').replaceChildren();
   $('zone-count').textContent='00';$('source-caption').textContent='Awaiting analysis';$('scene-title').textContent='Inspecting observation';
+  $('scene-tag').textContent='NO RESULT';$('region-code').textContent='';$('engine').textContent='No accepted analysis';
   $('map-caption').textContent='No conclusion until analysis completes.';$('coordinate-label').textContent='';
 }
 async function fetchJSON(url, options={}) {
@@ -35,7 +39,9 @@ async function analyze() {
   const timer=setTimeout(()=>{timedOut=true;controller.abort();},90000);
   try {
     let result;
-    if(state.example){
+    if(state.lab){
+      result=await fetchJSON(`/api/lab/${encodeURIComponent(state.lab)}/run`,{method:'POST',signal:controller.signal});
+    }else if(state.example){
       result=await fetchJSON(`/api/examples/${encodeURIComponent(state.example)}/analyze`,{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:state.zones?JSON.stringify(state.zones):''});
     }else{
       const form=new FormData();
@@ -45,6 +51,13 @@ async function analyze() {
       result=await fetchJSON('/api/analyze',{method:'POST',body:form,signal:controller.signal});
     }
     if(controller.signal.aborted)return;
+    if(state.lab&&result.kind==='rejection_check'){
+      renderLab(result.lab,result.observed_rejection);$('scene-title').textContent='Input rejected — no map produced';
+      $('scene-tag').textContent='SYNTHETIC TEST';$('region-code').textContent='EVIDENCE LAB';$('source-caption').textContent='Rejected test input';
+      $('zone-list').replaceChildren(element('p','No inspection queue: unsupported input was rejected.','empty'));
+      $('map-caption').textContent='Synthetic rejection exercise. No measured scene summary or field conclusion is available.';
+      return;
+    }
     state.report=M.validateResult(result);state.selected=result.zones[0]?.id;render();
   }catch(error){
     message(controller.signal.aborted?(timedOut?'Analysis timed out. The server may still finish; choose an example or submit again to retry.':'Stopped waiting. The server may still finish. No result has been accepted.'):error instanceof TypeError?'Cannot reach the local service. Start FieldWatch and retry.':error.message);
@@ -53,10 +66,11 @@ async function analyze() {
 }
 function render() {
   const r=state.report;
-  $('water-value').textContent=number(r.summary.water_observed_ha);$('unknown-value').textContent=number(r.summary.uncertain_ha);
+  $('water-value').textContent=M.areaLabel(r.summary.water_observed_ha);$('unknown-value').textContent=M.areaLabel(r.summary.uncertain_ha);
   $('coverage-value').textContent=percent(r.summary.assessed_fraction);$('date-value').textContent=r.source.observed_on||'Not supplied';
   $('source-caption').textContent=r.context?'Historical · Sentinel-1':'User-supplied acquisition';$('scene-title').textContent=r.name;
   $('scene-tag').textContent=r.context?'HISTORICAL':'UPLOADED';$('region-code').textContent=(state.example||'YOUR STUDY AREA').toUpperCase();
+  if(r.lab){$('scene-tag').textContent=r.lab.kind==='synthetic'?'SYNTHETIC TEST':'REFERENCE REPLAY';$('source-caption').textContent=r.lab.kind==='synthetic'?'Synthetic test date':'Historical · evaluation replay';$('region-code').textContent='EVIDENCE LAB';renderLab(r.lab);}
   $('coordinate-label').textContent=`Latitude ${r.source.bounds[1].toFixed(3)}° to ${r.source.bounds[3].toFixed(3)}° · ${r.source.crs}`;
   $('map-placeholder').hidden=true;$('map-stack').hidden=false;
   $('satellite').width=r.source.width;$('satellite').height=r.source.height;
@@ -71,9 +85,14 @@ function render() {
 function renderView() {
   if(!state.report)return;
   const r=state.report,view=$('view-select').value;
-  $('satellite').src=r.images[view];$('satellite').alt=`${r.name} — ${view==='optical'?'optical context':view==='earlier'?'earlier VV radar':'current VV radar'}`;
+  const layerNames={optical:'optical context',earlier:'earlier VV radar',radar:'current VV radar',errors:'evaluation error map',reference_labels:'independent reference labels'};
+  $('satellite').src=r.images[view];$('satellite').alt=`${r.name} — ${layerNames[view]}`;
   $('evidence').src=view==='earlier'?r.images.earlier_evidence:r.images.evidence;
-  $('evidence').hidden=!$('evidence-toggle').checked;
+  const evaluationView=['errors','reference_labels'].includes(view);
+  $('evidence').hidden=evaluationView||!$('evidence-toggle').checked;
+  $('evidence-toggle').disabled=evaluationView;
+  $('lab-legend').hidden=view!=='errors';$('normal-legend').hidden=evaluationView;
+  if(evaluationView){$('map-caption').textContent=(view==='errors'?'Evaluation only: blue = correct water, coral = false alarm, violet = missed water (including unknown predictions), grey = labeled no-water without a water prediction (including unknown), dark = unlabeled.':'Independent reference labels: blue = labeled water, grey = labeled no-water, dark = excluded NoData. Labels are not supplied to inference.')+' Selected exposed-test replay; not a new accuracy estimate.';return;}
   const note=view==='optical'?`Optical context: ${r.context.optical_date}; classification uses radar from ${r.source.observed_on}. Cloud cover is not screened in this preview.`:view==='earlier'?`Earlier radar: ${r.reference.observed_on}. The inspection queue still describes the current observation.`:'VV radar backscatter shown on a fixed −30 to 0 dB scale. Dark does not always mean water.';
   $('map-caption').textContent=note+' Zones: '+r.zone_basis+'.';
 }
@@ -87,11 +106,13 @@ function renderZones() {
     const title=element('div',undefined,'zone-line');title.append(element('span',zone.name),element('span',M.statuses[zone.status],'status-label'));
     const bar=svgElement('svg',{viewBox:'0 0 100 4',height:4,width:'100%','aria-hidden':'true',class:'zone-bar'});
     bar.append(svgElement('rect',{x:0,y:0,width:100,height:4,fill:'#e8eae1'}),svgElement('rect',{x:0,y:0,width:zone.water_fraction*100,height:4,fill:'#269dc6'}),svgElement('rect',{x:zone.water_fraction*100,y:0,width:(1-zone.coverage)*100,height:4,fill:'#e7bf63'}));
-    button.append(title,bar,element('small',`${number(zone.water_observed_ha)} ha water · ${percent(1-zone.coverage)} uncertain${state.reviews[zone.id]?' · reviewed':''}`));
+    button.append(title,bar,element('small',`${M.areaLabel(zone.water_observed_ha)} ha water · ${percent(1-zone.coverage)} uncertain${state.reviews[zone.id]?' · reviewed':''}`));
     button.addEventListener('click',()=>selectZone(zone.id));return button;
   }));
   if(!filtered.length)$('zone-list').append(element('p','No zones in this queue.','empty'));
   const svg=$('zone-svg');svg.replaceChildren();
+  svg.style.setProperty('--zone-label-size',`${r.source.width*11/512}px`);
+  svg.style.setProperty('--zone-label-stroke',`${r.source.width*3/512}px`);
   if($('zones-toggle').checked)for(const [index,zone]of r.zones.entries()){
     for(const ring of rings(zone.pixel_geometry)){
       const poly=svgElement('polygon',{points:ring.map(p=>p.join(',')).join(' '),tabindex:0,role:'button','aria-label':`${zone.name}: ${M.statuses[zone.status]}`,class:zone.id===state.selected?'selected':''});
@@ -107,8 +128,10 @@ function selectZone(id){state.selected=id;renderZones();renderDetail();}
 function renderDetail(){
   const r=state.report,z=r?.zones.find(z=>z.id===state.selected);$('zone-detail').hidden=!z;if(!z)return;
   $('detail-title').textContent=z.name;$('detail-reason').textContent=z.reasons.join(' ');
-  const stats=[[number(z.area_ha)+' ha','Scene overlap'],[number(z.water_observed_ha)+' ha','Water-like evidence'],[percent(1-z.coverage),'Uncertain']];
-  if(z.new_water_candidate_ha!==null)stats.push([number(z.new_water_candidate_ha)+' ha','New water candidate'],[number(z.repeat_water_observed_ha)+' ha','Water at both observations']);
+  $('decision-gate').hidden=!z.decision;
+  if(z.decision){$('decision-level').textContent=z.decision.level.replaceAll('_',' ').toUpperCase();$('decision-next').textContent=z.decision.next_step;$('decision-reasons').textContent=z.decision.reasons.join(' ');}
+  const stats=[[M.areaLabel(z.area_ha)+' ha','Scene overlap'],[M.areaLabel(z.water_observed_ha)+' ha','Water-like evidence'],[percent(1-z.coverage),'Uncertain']];
+  if(z.new_water_candidate_ha!==null)stats.push([M.areaLabel(z.new_water_candidate_ha)+' ha','New water candidate'],[M.areaLabel(z.repeat_water_observed_ha)+' ha','Water at both observations']);
   $('zone-stats').replaceChildren(...stats.map(([value,label])=>{const item=element('span');item.append(element('strong',value),document.createTextNode(label));return item;}));
   const review=state.reviews[z.id];$('review-outcome').value=review?.outcome||'unreviewed';$('review-note').value=review?.note||'';
 }
@@ -137,14 +160,34 @@ document.querySelectorAll('.close-dialog').forEach(button=>button.addEventListen
 $('upload-form').addEventListener('submit',event=>{event.preventDefault();const current=$('current-file').files[0],reference=$('reference-file').files[0];if(!current)return;
   if([current,reference].some(file=>file&&file.size>24*1024*1024)){message('Each GeoTIFF must be at most 24 MiB.');$('upload-dialog').close();return;}
   if(reference&&(!$('reference-date').value||!$('same-orbit').checked)){message('For comparison, supply the earlier date and confirm matching acquisitions.');$('upload-dialog').close();return;}
-  state.upload={current,reference,date:$('current-date').value,referenceDate:$('reference-date').value,sameOrbit:$('same-orbit').checked};state.example=null;state.zones=null;
+  state.upload={current,reference,date:$('current-date').value,referenceDate:$('reference-date').value,sameOrbit:$('same-orbit').checked};state.example=null;state.lab=null;state.zones=null;
   document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed','false'));$('upload-dialog').close();analyze();
 });
 async function init(){
   try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);let examples;try{examples=await fetchJSON('/api/examples',{signal:controller.signal});}finally{clearTimeout(timer);}
-    $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',item.date));button.append(caption);button.addEventListener('click',()=>{state.example=item.id;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
+    $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',item.date));button.append(caption);button.addEventListener('click',()=>{state.example=item.id;state.lab=null;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
     if(examples.some(item=>item.available))document.querySelectorAll('.example')[examples.findIndex(item=>item.available)].click();
     else message('The public demo has not been downloaded. Run: python scripts/fetch_fieldwatch_data.py --split demo. You can also upload your own calibrated radar.');
   }catch(error){message('Cannot load examples. Start the FieldWatch service and reload this page.');}
 }
+function renderLab(lab,rejection=''){
+  $('lab-result').hidden=false;$('lab-kind').textContent=lab.kind==='synthetic'?'SYNTHETIC CONTRACT CHECK':'REAL DATA / SELECTED REPLAY';
+  $('lab-title').textContent=lab.title;$('lab-question').textContent=lab.question;$('lab-notice').textContent=lab.notice;
+  $('lab-lesson').textContent=lab.lesson;$('lab-rejection').textContent=rejection;
+  $('lab-checks').replaceChildren(...(lab.checks||[]).map(check=>element('li',`${check.passed?'PASS':'FAIL'} · ${check.name}`,check.passed?'check-pass':'check-fail')));
+  const stats=lab.metrics?[[metricPercent(lab.metrics.precision),'Water precision'],[metricPercent(lab.metrics.recall),'Water recall'],[metricPercent(lab.metrics.iou),'Water IoU'],[number(lab.metrics.false_positive_pixels),'False-alarm pixels'],[number(lab.metrics.missed_water_pixels),'Missed-water pixels'],[number(lab.metrics.unknown_water_pixels),'Of those: unknown']]:[];
+  $('lab-metrics').replaceChildren(...stats.map(([value,label])=>{const item=element('div');item.append(element('strong',value),element('small',label));return item;}));
+}
+$('close-lab').addEventListener('click',()=>{$('lab-library').hidden=true;});
+$('lab-button').addEventListener('click',async()=>{
+  $('lab-library').hidden=false;
+  if($('lab-cases').children.length)return;
+  try{const items=await fetchJSON('/api/lab',{signal:AbortSignal.timeout(10000)});
+    $('lab-cases').replaceChildren(...items.map(item=>{const button=element('button',undefined,'lab-card');
+      button.append(element('small',item.kind==='synthetic'?'SYNTHETIC CONTRACT':'REGIONAL REPLAY'),element('strong',item.title),element('span',item.question));
+      if(!item.available)button.append(element('small','Download required: --split lab'));
+      button.disabled=!!state.controller;
+      button.addEventListener('click',()=>{state.lab=item.id;state.example=null;state.upload=null;state.zones=null;$('lab-library').hidden=true;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed','false'));analyze();});return button;}));
+  }catch(error){message('Cannot load the Evidence Lab. Check the local service and reopen the library.');}
+});
 init();

@@ -1,6 +1,9 @@
 (function(root) {
   'use strict';
   const statuses = {inspect_water:'Inspect water',resolve_uncertainty:'Resolve uncertainty',no_signal:'Low signal'};
+  function areaLabel(value) {
+    return value>0 && value<.1 ? '<0.1' : new Intl.NumberFormat('en',{maximumFractionDigits:1}).format(value);
+  }
   function validateResult(value) {
     if (!value || value.schema_version !== '1.0' || !value.source || !value.images || !Array.isArray(value.zones) || !value.summary || !Array.isArray(value.trace)) throw new Error('The service returned an incomplete report.');
     if (!Number.isInteger(value.source.width) || !Number.isInteger(value.source.height) || value.source.width < 16 || value.source.height < 16 || value.source.width * value.source.height > 2000000) throw new Error('The service returned invalid image dimensions.');
@@ -25,7 +28,7 @@
     const ring = points.map(p => pixelToGeo(p,source)); ring.push([...ring[0]]);
     return {type:'Feature',properties:{id:'drawn-'+index,name:'Drawn review zone '+index,crop:'unknown'},geometry:{type:'Polygon',coordinates:[ring]}};
   }
-  const api={statuses,validateResult,reviewExport,pixelToGeo,featureFromPoints};
+  const api={statuses,areaLabel,validateResult,reviewExport,pixelToGeo,featureFromPoints};
   if (typeof module !== 'undefined' && module.exports) module.exports=api;
   else root.FieldWatchModel=api;
 })(typeof window !== 'undefined' ? window : globalThis);
