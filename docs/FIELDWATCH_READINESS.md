@@ -13,15 +13,16 @@ The Sites local-preview guidance informed browser verification and responsive la
 
 ## Local verification record
 
-- Native Python suite: **200 passed**, including 76 FieldWatch and 124 preserved ChartCourt tests. FieldWatch coverage includes raster/GeoJSON admission, explicit unknowns, pair metadata/alignment, geographic area accounting, rejected-scene benchmark scoring, upload limits, host/origin guards, private CLI exports, lab routes and reference-label independence.
-- Nine FieldWatch frontend-model tests passed; the 19 preserved ChartCourt network tests also passed. Small positive reported areas display as `<0.1 ha`, not zero; raster labels scale with image dimensions.
+- Cleanup release: **94 Python tests and 10 JavaScript tests passed**, with a fresh Python 3.13 environment installed from the retained requirements files. All eight lab checks and the 90-chip regression passed. The lower test total reflects removal of predecessor-only tests, not lost FieldWatch coverage. The current browser recheck was blocked by the in-app browser access policy; browser observations below describe the earlier Evidence Lab verification, not a new visual sign-off for this patch.
+- The active suite contains only FieldWatch tests; obsolete ChartCourt tests and fixtures were removed with its runtime. Regression coverage includes malformed origins, strict GeoJSON shape/ring validation, null-zone rejection, paddy whitespace, invalid longitude, NaN previews, optical-context failure recovery and drawn-ID collisions.
+- Small positive reported areas display as `<0.1 ha`, not zero; raster labels scale with image dimensions.
 - All eight executable synthetic lab exercises passed. The 90-chip regression reproduced all original case hashes/counts, event metrics and pooled scores exactly; this is regression evidence on exposed data, not new blind validation.
 - Live HTTP smoke test passed against the local server: synthetic GeoTIFF decoding, water result, invalid-input rejection and untrusted-host rejection.
 - Browser checks passed for real India GeoTIFF upload; custom polygon drawing and reanalysis; GeoJSON import with a rice-context warning; uncertainty filtering; saved review; downloaded JSON without images; synthetic paired upload; earlier-layer switching; and 96×64 image/overlay aspect-ratio preservation.
 - Responsive check at 390×844 showed no horizontal overflow. Normal desktop browser rendering was inspected; no console errors/warnings were reported in the tested flows.
 - Evidence Lab browser checks passed for India and Sri Lanka metrics, isolated reference/error layers, four-pixel and paddy gates, shifted-grid rejection after a real result (no stale map/metrics/export), image-free lab JSON with disclosures, return to ordinary India analysis, and mobile library/report layouts. No console warnings/errors were recorded in these flows.
 - A **synthetic** paired-raster UI test confirms the comparison interface, not real flood-change accuracy. No equivalent real-pair validation has been completed.
-- Direct dependency consistency check passed. Upstream Starlette/httpx and legacy Matplotlib deprecation warnings remain. This is not a dependency vulnerability audit.
+- Direct dependency consistency check passed. The upstream Starlette/httpx test-client deprecation warning remains. This is not a dependency vulnerability audit. Runtime and development dependencies now use only `requirements.txt` and `requirements-dev.txt`; obsolete OCR/plotting dependencies were removed.
 
 ## Competition readiness is not complete
 
