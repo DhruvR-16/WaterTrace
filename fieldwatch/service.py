@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 
 from fieldwatch.engine import POLICY, InvalidRaster, classify, compare, geographic_bounds, pixel_areas, read_raster, summarize_zones
+from fieldwatch.decisions import review_decision
 
 
 def png(array):
@@ -60,6 +61,9 @@ def run_analysis(raw, *, name="Radar scene", observed_on=None, reference_raw=Non
     steps.append({"action": "request_human_review" if unknown_fraction > .3 else "summarize_observed_evidence",
                   "outcome": f"{unknown_fraction:.1%} of the scene is uncertain/unobserved. Unknown pixels are not classified as safe."})
     rows = summarize_zones(raster, classes, zones, new_water, persistent)
+    for row in rows:
+        row['decision'] = review_decision(row, reference is not None)
+    steps.append({'action':'check_field_review_gates', 'outcome':f"{sum(r['decision']['level'] == 'insufficient_evidence' for r in rows)} zones lack sufficient coverage or resolution for a whole-field interpretation. Pixel measurements remain visible; field-level conclusions are withheld."})
     steps.append({"action": "prepare_separate_review_queues", "outcome": "Water-evidence and uncertainty queues are separate. No automatic interventions, field visits or insurance decisions."})
     bounds = geographic_bounds(raster)
     summary = {"scene_area_ha": round(total, 3), "water_observed_ha": round(float(area[classes == 2].sum()),3),

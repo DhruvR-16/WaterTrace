@@ -37,7 +37,8 @@ jobs:
           python -m pip check
       - name: Synthetic contract and frontend tests
         run: |
-          python -m pytest -q tests/test_fieldwatch.py
+          python -m pytest -q tests/test_fieldwatch.py tests/test_fieldwatch_lab.py
+          python scripts/check_fieldwatch_lab.py
           node --check fieldwatch/static/app.js
           node --check fieldwatch/static/model.js
           node --test tests/fieldwatch.test.cjs

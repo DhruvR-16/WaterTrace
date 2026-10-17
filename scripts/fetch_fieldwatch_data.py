@@ -1,6 +1,6 @@
-"""Download explicit public Sen1Floods11 subsets; never ship benchmark labels in the app.
+"""Download explicit Sen1Floods11 subsets; labels are for evaluation, not inference.
 
-Usage: python scripts/fetch_fieldwatch_data.py --split demo|valid|test
+Usage: python scripts/fetch_fieldwatch_data.py --split demo|lab|valid|test
 Data stays in ignored data/fieldwatch. No cloud credentials are needed.
 """
 import argparse
@@ -41,16 +41,22 @@ def fetch(client, key):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--split", choices=["demo", "valid", "test"], default="demo")
+    parser.add_argument("--split", choices=["demo", "lab", "valid", "test"], default="demo")
     args = parser.parse_args()
     with httpx.Client(timeout=60, follow_redirects=False) as client:
-        split = "train" if args.split == "demo" else args.split
+        split = "train" if args.split == "demo" else "test" if args.split == "lab" else args.split
         split_path = fetch(client, f"splits/flood_handlabeled/flood_{split}_data.csv")
         rows = list(csv.reader(io.StringIO(split_path.read_text())))
         pairs = [(Path(row[0]).name, Path(row[1]).name) for row in rows if len(row) == 2]
         if args.split == "demo":
             # Deterministic examples from training split, never select on test performance.
             pairs = [next(p for p in pairs if p[0].startswith(country + "_")) for country in ("Spain", "India", "USA")]
+        if args.split == 'lab':
+            sys.path.insert(0,str(ROOT))
+            from fieldwatch.lab import CASES
+            selected={item['chip']+'_S1Hand.tif' for item in CASES if item['kind']=='real_replay'}
+            pairs=[p for p in pairs if p[0] in selected]
+            if len(pairs)!=len(selected):raise ValueError('Lab case not found in the public test split.')
         keys = [FOLDER + layer + "/" + name for image, label in pairs
                 for layer, name in [("S1Hand", image), ("LabelHand", label)]]
         if args.split == "demo":

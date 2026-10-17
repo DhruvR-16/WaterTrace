@@ -11,8 +11,8 @@ from fieldwatch.service import png
 DATA = Path(os.getenv("FIELDWATCH_DATA", str(Path(__file__).resolve().parents[1]/"data"/"fieldwatch")))
 RASTERS = DATA / "data/flood_events/HandLabeled"
 EXAMPLES = [
-    {"id":"spain", "title":"Eastern Spain", "region":"Spain · historical flood-event imagery", "chip":"Spain_5923267", "date":"2019-09-17", "optical_date":"2019-09-18", "orbit":110},
     {"id":"india", "title":"Northeast India", "region":"India · historical flood-event imagery", "chip":"India_285297", "date":"2016-08-12", "optical_date":"2016-08-12", "orbit":77},
+    {"id":"spain", "title":"Eastern Spain", "region":"Spain · historical flood-event imagery", "chip":"Spain_5923267", "date":"2019-09-17", "optical_date":"2019-09-18", "orbit":110},
     {"id":"usa", "title":"Central United States", "region":"USA · historical flood-event imagery", "chip":"USA_994009", "date":"2019-05-22", "optical_date":"2019-05-22", "orbit":136},
 ]
 

@@ -19,6 +19,7 @@ from fieldwatch.catalog import examples, find_example, optical_preview, radar_pa
 from fieldwatch.engine import InvalidRaster, MAX_BYTES
 from fieldwatch.limits import RequestLimits
 from fieldwatch.service import run_analysis
+from fieldwatch.lab import cases, case_by_id, run_case
 
 STATIC = Path(__file__).parent / "static"
 SLOTS = BoundedSemaphore(2)
@@ -53,6 +54,33 @@ def health():
 @app.get("/api/examples")
 def list_examples():
     return examples()
+
+
+@app.get('/api/lab')
+def list_lab():
+    return cases()
+
+
+@app.post('/api/lab/{identifier}/run')
+async def analyze_lab(identifier: str, request: Request):
+    if case_by_id(identifier) is None:
+        raise HTTPException(404,'Lab case not found.')
+    if await request.body():
+        raise HTTPException(422,'Lab cases have fixed inputs; no custom payload is accepted.')
+    def bounded_case():
+        if not SLOTS.acquire(False):raise HTTPException(429,'Two analyses are already running. Please retry shortly.')
+        try:
+            return run_case(identifier)
+        except FileNotFoundError:
+            raise HTTPException(503,'Download the regional replay cases: python scripts/fetch_fieldwatch_data.py --split lab') from None
+        except InvalidRaster as exc:
+            raise HTTPException(422,str(exc)) from None
+        except Exception as exc:
+            logging.getLogger(__name__).error('Lab failed (%s)',type(exc).__name__)
+            raise HTTPException(500,'Lab analysis failed. No result was produced.') from None
+        finally:
+            SLOTS.release()
+    return await run_in_threadpool(bounded_case)
 
 
 def execute(raw, **kwargs):
