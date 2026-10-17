@@ -1,2 +1,2 @@
 """FieldWatch: evidence-led satellite water-exposure review."""
-__version__ = "0.2.1"
+__version__ = "0.3.0"

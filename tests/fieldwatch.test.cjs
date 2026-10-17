@@ -39,3 +39,122 @@ test('untrusted preview URLs rejected',()=>{
   const value={schema_version:'1.0',source:{width:64,height:64,sha256:'a'.repeat(64)},images:{radar:'https://tracker.invalid/'},zones:[],summary:{},trace:[]};
   assert.throws(()=>model.validateResult(value));value.images.radar='data:image/png;base64,AA==';assert.equal(model.validateResult(value),value);
 });
+
+function reviewFixture(){
+  return {schema_version:'1.0',source:{sha256:'a'.repeat(64),observed_on:'2020-01-10',crs:'EPSG:4326'},
+    reference:{sha256:'b'.repeat(64),observed_on:'2020-01-01'},engine:{policy:'screen-v1'},policy:{threshold:-20},reference_policy:{threshold:-21},
+    zones:[{id:'a',crop:'rice',geometry:{type:'Polygon',coordinates:[[[0,0],[1,0],[1,1],[0,0]]]},decision:{policy:'gates-v1'}}],
+    images:{radar:'pixels'},generated_at:'2020-01-11T00:00:00Z'};
+}
+const savedReview={outcome:'follow_up',note:'Check local irrigation context.',recorded_at:'2020-01-11T00:00:00Z'};
+test('draft tracking distinguishes untouched and edited notes',()=>{
+  assert.equal(model.reviewChanged(undefined,'unreviewed',''),false);
+  assert.equal(model.reviewChanged(undefined,'unreviewed','draft'),true);
+  assert.equal(model.reviewChanged(savedReview,'follow_up',savedReview.note),false);
+  assert.equal(model.reviewChanged(savedReview,'false_alarm',savedReview.note),true);
+  assert.equal(model.reviewChanged(savedReview,'follow_up',''),true);
+});
+test('export and restoration preserve notes without mutating measurements',()=>{
+  const report=reviewFixture(),before=JSON.stringify(report),exported=model.reviewExport(report,{a:savedReview});
+  const restored=model.restoreReviews(report,JSON.parse(JSON.stringify(exported)));
+  assert.equal(restored.a.note,savedReview.note);assert.equal(restored.a.restored_from_export,true);
+  assert.equal(Object.getPrototypeOf(restored),null);assert.equal(JSON.stringify(report),before);
+});
+test('regeneration timestamps and JSON key ordering do not invalidate matching inputs',()=>{
+  const report=reviewFixture(),exported=model.reviewExport(report,{a:savedReview});
+  exported.generated_at='2026-01-01T00:00:00Z';
+  exported.source={crs:'EPSG:4326',observed_on:'2020-01-10',sha256:'a'.repeat(64)};
+  assert.equal(model.restoreReviews(report,exported).a.outcome,'follow_up');
+});
+for(const [name,change]of Object.entries({
+  source:r=>r.source.sha256='c'.repeat(64),date:r=>r.source.observed_on='2020-01-09',
+  reference:r=>r.reference.sha256='c'.repeat(64),policy:r=>r.engine.policy='different',
+  thresholds:r=>r.policy.threshold=-19,geometry:r=>r.zones[0].geometry.coordinates[0][1][0]=2,
+  crop:r=>r.zones[0].crop='wheat',gate:r=>r.zones[0].decision.policy='gates-v2',
+}))test(`restoration refuses changed ${name}`,()=>{
+  const report=reviewFixture(),exported=JSON.parse(JSON.stringify(model.reviewExport(report,{a:savedReview})));
+  change(exported);assert.throws(()=>model.restoreReviews(report,exported),/does not match/);
+});
+test('restoration rejects malformed, excessive, duplicate and foreign notes',()=>{
+  const report=reviewFixture(),exported=model.reviewExport(report,{a:savedReview});
+  for(const human_reviews of [null,{},Array(101).fill({}),[{...savedReview,zone_id:'foreign'}],
+    [{...savedReview,zone_id:'a',note:'x'.repeat(1001)}],[{...savedReview,zone_id:'a',outcome:'safe'}],
+    [{...savedReview,zone_id:'a',recorded_at:'invalid'}],Array(2).fill({...savedReview,zone_id:'a'})]){
+    assert.throws(()=>model.restoreReviews(report,{...exported,human_reviews}));
+  }
+  assert.throws(()=>model.restoreReviews(report,{...exported,images:{radar:'pixels'}}));
+});
+test('prototype-looking IDs and markup remain inert annotation strings',()=>{
+  const report=reviewFixture();report.zones[0].id='__proto__';
+  const exported=model.reviewExport(report,{['__proto__']:{...savedReview,note:'<script>not executable</script>'}});
+  const restored=model.restoreReviews(report,exported);
+  assert.equal(Object.getPrototypeOf(restored),null);assert.equal(restored.__proto__.note,'<script>not executable</script>');
+});
+
+// Unit-test event wiring with inert DOM doubles; this is not browser/layout QA.
+async function reviewUI(){
+  const vm=require('node:vm'),fs=require('node:fs');
+  class Element {
+    constructor(){this.value='';this.children=[];this.listeners={};this.dataset={};this.style={setProperty(){}};this.classList={add(){},remove(){}};}
+    addEventListener(name,fn){this.listeners[name]=fn;}
+    setAttribute(){}
+    append(...items){this.children.push(...items);}
+    replaceChildren(...items){this.children=items;}
+    click(){return this.listeners.click?.();}
+  }
+  const elements=new Map(),events={},captured={confirm:false,confirmCalls:0,blob:null};
+  const get=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
+  const document={getElementById:get,querySelectorAll:()=>[],createElement:()=>new Element(),createElementNS:()=>new Element(),createTextNode:text=>text};
+  const context=vm.createContext({document,window:{FieldWatchModel:model,addEventListener:(n,f)=>events[n]=f,
+    confirm:()=>{captured.confirmCalls++;return captured.confirm;}},
+    fetch:async()=>({ok:true,json:async()=>[{id:'india',title:'India',date:'2020-01-10',available:false}]}),
+    AbortController,AbortSignal,Blob,URL:{createObjectURL:blob=>{captured.blob=blob;return 'blob:test';},revokeObjectURL(){}},
+    setTimeout:()=>0,clearTimeout(){}});
+  vm.runInContext(fs.readFileSync(require.resolve('../fieldwatch/static/app.js'),'utf8'),context);
+  await new Promise(resolve=>setImmediate(resolve));
+  const report=reviewFixture();report.source.width=64;
+  report.zones=['a','b'].map(id=>({id,status:'inspect_water',name:id,crop:'rice',reasons:[],coverage:1,water_fraction:.5,
+    area_ha:1,water_observed_ha:.5,new_water_candidate_ha:null,geometry:{type:'Polygon',coordinates:[]}}));
+  context.fixture=report;
+  vm.runInContext("state.report=fixture;state.selected='a';state.example='original';",context);
+  get('review-outcome').value='unreviewed';
+  return {get,context,events,captured,run:code=>vm.runInContext(code,context)};
+}
+test('zone selection keeps an unsaved draft and restores it when returning',async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Draft without pressing Save';
+  ui.run("selectZone('b')");assert.equal(ui.run('state.reviews.a.note'),'Draft without pressing Save');
+  assert.equal(ui.get('review-note').value,'');
+  ui.run("selectZone('a')");assert.equal(ui.get('review-note').value,'Draft without pressing Save');
+});
+test('cancelled scene replacement preserves the active report and draft',async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Do not lose this';
+  ui.get('examples').children[0].click();
+  assert.equal(ui.captured.confirmCalls,1);assert.equal(ui.run('state.example'),'original');
+  assert.equal(ui.run('state.report===fixture'),true);assert.equal(ui.run('state.reviews.a.note'),'Do not lose this');
+});
+test('export includes the current draft and clears only the pending-export flag',async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Latest typed text';
+  ui.get('export-button').click();
+  const saved=JSON.parse(await ui.captured.blob.text());
+  assert.equal(saved.human_reviews[0].note,'Latest typed text');assert.equal(saved.images,undefined);
+  assert.equal(ui.run('state.reviewsDirty'),false);assert.equal(ui.run('state.reviews.a.note'),'Latest typed text');
+});
+test('leaving with an edited draft requests a browser warning',async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Pending';let prevented=false;
+  ui.events.beforeunload({preventDefault(){prevented=true;}});
+  assert.equal(prevented,true);assert.equal(ui.run('state.reviews.a.note'),'Pending');
+});
+test('restore control imports only annotations and keeps the active result',async()=>{
+  const ui=await reviewUI(),exported=model.reviewExport(ui.run('state.report'),{a:savedReview});
+  await ui.get('review-file').listeners.change({target:{files:[{size:1000,text:async()=>JSON.stringify(exported)}],value:'selected'}});
+  assert.equal(ui.run('state.report===fixture'),true);assert.equal(ui.run('state.reviews.a.note'),savedReview.note);
+  assert.equal(ui.get('review-note').value,savedReview.note);
+});
+test('failed restore leaves current draft and saved notes untouched',async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Current draft';
+  const exported=model.reviewExport(ui.run('state.report'),{a:savedReview});
+  exported.source={...exported.source,sha256:'c'.repeat(64)};
+  await ui.get('review-file').listeners.change({target:{files:[{size:1000,text:async()=>JSON.stringify(exported)}],value:'selected'}});
+  assert.equal(ui.get('review-note').value,'Current draft');assert.equal(ui.run('Object.keys(state.reviews).length'),0);
+  assert.match(ui.get('message').textContent,/does not match/);
+});

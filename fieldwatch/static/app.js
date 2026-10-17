@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const M = window.FieldWatchModel;
-const state = {report:null,example:null,lab:null,upload:null,zones:null,reviews:Object.create(null),selected:null,filter:'all',controller:null,drawing:false,points:[]};
+const state = {report:null,example:null,lab:null,upload:null,zones:null,reviews:Object.create(null),reviewsDirty:false,selected:null,filter:'all',controller:null,drawing:false,points:[]};
 const number = value => new Intl.NumberFormat('en',{maximumFractionDigits:1}).format(value);
 const percent = value => `${Math.round(value*100)}%`;
 const metricPercent = value => value===null?'N/A':`${(value*100).toFixed(1)}%`;
@@ -10,12 +10,12 @@ function svgElement(tag,attrs) {const el=document.createElementNS('http://www.w3
 function message(text) {$('message').textContent=text;$('message').hidden=!text;}
 function busy(active) {
   $('busy').hidden=!active;
-  document.querySelectorAll('.example,.lab-card,#upload-button,#export-button,#draw-button,#import-button').forEach(el=>el.disabled=active || (['export-button','draw-button','import-button'].includes(el.id)&&!state.report));
+  document.querySelectorAll('.example,.lab-card,#upload-button,#export-button,#restore-button,#draw-button,#import-button').forEach(el=>el.disabled=active || (['export-button','restore-button','draw-button','import-button'].includes(el.id)&&!state.report));
   $('draw-button').disabled=active || !!state.lab || !state.report || state.report.source.crs!=='EPSG:4326';
   $('import-button').disabled=active || !!state.lab || !state.report;
 }
 function clearReport() {
-  state.report=null;state.selected=null;state.reviews=Object.create(null);state.filter='all';
+  state.report=null;state.selected=null;state.reviews=Object.create(null);state.reviewsDirty=false;state.filter='all';
   $('lab-result').hidden=true;$('lab-legend').hidden=true;$('normal-legend').hidden=false;
   ['water-value','unknown-value','coverage-value','date-value'].forEach(id=>$(id).textContent='—');
   $('map-stack').hidden=true;$('map-placeholder').hidden=false;$('zone-detail').hidden=true;
@@ -124,7 +124,22 @@ function renderZones() {
   }
   if(state.points.length)svg.append(svgElement('polygon',{points:state.points.map(p=>p.join(',')).join(' '),class:'draft'}));
 }
-function selectZone(id){state.selected=id;renderZones();renderDetail();}
+function captureReviewDraft(){
+  if(!state.report || !state.selected)return;
+  const outcome=$('review-outcome').value,note=$('review-note').value.slice(0,1000);
+  if(M.reviewChanged(state.reviews[state.selected],outcome,note)){
+    state.reviews[state.selected]={outcome,note,recorded_at:new Date().toISOString()};state.reviewsDirty=true;
+  }
+}
+function confirmReviewReplacement(){
+  if(state.controller)return false;
+  captureReviewDraft();
+  return !state.reviewsDirty || window.confirm('This will clear unexported session notes, even if the next analysis fails. Cancel to export them first. Continue?');
+}
+window.addEventListener('beforeunload',event=>{
+  captureReviewDraft();if(state.reviewsDirty){event.preventDefault();event.returnValue='';}
+});
+function selectZone(id){captureReviewDraft();state.selected=id;renderZones();renderDetail();}
 function renderDetail(){
   const r=state.report,z=r?.zones.find(z=>z.id===state.selected);$('zone-detail').hidden=!z;if(!z)return;
   $('detail-title').textContent=z.name;$('detail-reason').textContent=z.reasons.join(' ');
@@ -146,12 +161,25 @@ function renderTimeline(){
 function stopDrawing(){state.drawing=false;state.points=[];$('draw-controls').hidden=true;$('map-stack').classList.remove('draw-mode');if(state.report)renderZones();}
 $('draw-button').addEventListener('click',()=>{state.drawing=true;state.points=[];$('draw-controls').hidden=false;$('map-stack').classList.add('draw-mode');message('Drawing replaces the illustrative grid on the first added zone. Existing session reviews are reset when zones change.');});
 $('zone-svg').addEventListener('click',event=>{if(!state.drawing)return;const box=$('zone-svg').getBoundingClientRect();state.points.push([(event.clientX-box.left)/box.width*state.report.source.width,(event.clientY-box.top)/box.height*state.report.source.height]);renderZones();});
-$('finish-draw').addEventListener('click',()=>{try{const features=state.zones?.features||[];if(features.length>=100)throw new Error('Use at most 100 review zones.');const feature=M.featureFromPoints(state.points,state.report.source,features.length+1,state.report.zones.map(z=>z.id));state.zones={type:'FeatureCollection',features:[...features,feature]};analyze();}catch(error){message(error.message);}});
+$('finish-draw').addEventListener('click',()=>{try{const features=state.zones?.features||[];if(features.length>=100)throw new Error('Use at most 100 review zones.');const feature=M.featureFromPoints(state.points,state.report.source,features.length+1,state.report.zones.map(z=>z.id));if(!confirmReviewReplacement())return;state.zones={type:'FeatureCollection',features:[...features,feature]};analyze();}catch(error){message(error.message);}});
 $('cancel-draw').addEventListener('click',()=>{stopDrawing();message('');});
 $('import-button').addEventListener('click',()=>$('geojson-file').click());
-$('geojson-file').addEventListener('change',async event=>{const file=event.target.files[0];event.target.value='';if(!file)return;try{if(file.size>200000)throw new Error('Use a GeoJSON file under 200 KB.');const value=JSON.parse(await file.text());if(value.type!=='FeatureCollection'||!Array.isArray(value.features))throw new Error('Import a GeoJSON FeatureCollection.');state.zones=value;await analyze();}catch(error){message(error.message);}});
-$('save-review').addEventListener('click',()=>{if(!state.selected)return;state.reviews[state.selected]={outcome:$('review-outcome').value,note:$('review-note').value.slice(0,1000),recorded_at:new Date().toISOString()};renderZones();message('Review saved in this browser session. Export it before closing. The algorithmic findings are unchanged.');});
-$('export-button').addEventListener('click',()=>{if(!state.report)return;const value=M.reviewExport(state.report,state.reviews);const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=element('a');link.href=url;link.download=`fieldwatch-review-${state.report.source.sha256.slice(0,12)}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('geojson-file').addEventListener('change',async event=>{const file=event.target.files[0],report=state.report;event.target.value='';if(!file)return;try{if(file.size>200000)throw new Error('Use a GeoJSON file under 200 KB.');const value=JSON.parse(await file.text());if(!value||value.type!=='FeatureCollection'||!Array.isArray(value.features))throw new Error('Import a GeoJSON FeatureCollection.');if(state.report!==report||state.controller)throw new Error('Observation changed while reading the file. Choose it again.');if(!confirmReviewReplacement())return;state.zones=value;await analyze();}catch(error){message(error.message);}});
+$('save-review').addEventListener('click',()=>{captureReviewDraft();renderZones();message('Review saved in this browser session. Export it before closing. The algorithmic findings are unchanged.');});
+$('export-button').addEventListener('click',()=>{if(!state.report)return;captureReviewDraft();const value=M.reviewExport(state.report,state.reviews);const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=element('a');link.href=url;link.download=`fieldwatch-review-${state.report.source.sha256.slice(0,12)}.json`;link.click();state.reviewsDirty=false;message('Export requested. Verify the downloaded file before leaving. Locations and human notes may be sensitive.');setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('restore-button').addEventListener('click',()=>$('review-file').click());
+$('review-file').addEventListener('change',async event=>{
+  const file=event.target.files[0],report=state.report;event.target.value='';if(!file||!report)return;
+  try{
+    if(file.size>2*1024*1024)throw new Error('Use a review export under 2 MiB.');
+    const value=JSON.parse(await file.text());
+    if(state.report!==report||state.controller)throw new Error('Observation changed while reading the file. Choose it again.');
+    const reviews=M.restoreReviews(report,value);
+    if(!confirmReviewReplacement())return;
+    state.reviews=reviews;state.reviewsDirty=false;renderZones();renderDetail();
+    message(`Restored ${Object.keys(reviews).length} human reviews locally. These are unverified annotations, not authenticated findings. Measurements are unchanged.`);
+  }catch(error){message(error.message);}
+});
 $('view-select').addEventListener('change',renderView);$('evidence-toggle').addEventListener('change',renderView);$('zones-toggle').addEventListener('change',renderZones);
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{state.filter=button.dataset.filter;renderZones();}));
 $('cancel-button').addEventListener('click',()=>state.controller?.abort());
@@ -160,12 +188,13 @@ document.querySelectorAll('.close-dialog').forEach(button=>button.addEventListen
 $('upload-form').addEventListener('submit',event=>{event.preventDefault();const current=$('current-file').files[0],reference=$('reference-file').files[0];if(!current)return;
   if([current,reference].some(file=>file&&file.size>24*1024*1024)){message('Each GeoTIFF must be at most 24 MiB.');$('upload-dialog').close();return;}
   if(reference&&(!$('reference-date').value||!$('same-orbit').checked)){message('For comparison, supply the earlier date and confirm matching acquisitions.');$('upload-dialog').close();return;}
+  if(!confirmReviewReplacement())return;
   state.upload={current,reference,date:$('current-date').value,referenceDate:$('reference-date').value,sameOrbit:$('same-orbit').checked};state.example=null;state.lab=null;state.zones=null;
   document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed','false'));$('upload-dialog').close();analyze();
 });
 async function init(){
   try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);let examples;try{examples=await fetchJSON('/api/examples',{signal:controller.signal});}finally{clearTimeout(timer);}
-    $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',item.date));button.append(caption);button.addEventListener('click',()=>{state.example=item.id;state.lab=null;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
+    $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',item.date));button.append(caption);button.addEventListener('click',()=>{if(!confirmReviewReplacement())return;state.example=item.id;state.lab=null;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
     if(examples.some(item=>item.available))document.querySelectorAll('.example')[examples.findIndex(item=>item.available)].click();
     else message('The public demo has not been downloaded. Run: python scripts/fetch_fieldwatch_data.py --split demo. You can also upload your own calibrated radar.');
   }catch(error){message('Cannot load examples. Start the FieldWatch service and reload this page.');}
@@ -187,7 +216,7 @@ $('lab-button').addEventListener('click',async()=>{
       button.append(element('small',item.kind==='synthetic'?'SYNTHETIC CONTRACT':'REGIONAL REPLAY'),element('strong',item.title),element('span',item.question));
       if(!item.available)button.append(element('small','Download required: --split lab'));
       button.disabled=!!state.controller;
-      button.addEventListener('click',()=>{state.lab=item.id;state.example=null;state.upload=null;state.zones=null;$('lab-library').hidden=true;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed','false'));analyze();});return button;}));
+      button.addEventListener('click',()=>{if(!confirmReviewReplacement())return;state.lab=item.id;state.example=null;state.upload=null;state.zones=null;$('lab-library').hidden=true;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed','false'));analyze();});return button;}));
   }catch(error){message('Cannot load the Evidence Lab. Check the local service and reopen the library.');}
 });
 init();
