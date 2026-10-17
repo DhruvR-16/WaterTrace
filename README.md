@@ -32,7 +32,11 @@ Without downloading, upload your own **trusted, north-up, calibrated VV/VH dB Ge
 - Filter water/uncertainty queues, select zones on the image or list, add human review notes, and export a JSON evidence report with source digests, geometry, policy, dates, and trace.
 - Run the same pipeline through a local CLI. Original imagery is excluded from CLI/report exports; coordinates and notes may still be sensitive.
 
-Reviews exist only in the current page memory. **Export before changing observations, reanalyzing zones, refreshing, or closing.** The default 3×3 sectors are demonstration survey areas, not farms or a cropland mask. Included examples are single observations; real temporal-pair validation remains outstanding.
+Reviews exist only in the current page memory. Draft notes are captured when selecting another zone or exporting. Switching observations or reanalyzing zones warns before clearing unexported notes; cancel to export first. Refresh/close warnings are browser-dependent, so **always verify your downloaded export before leaving**. No notes are automatically written to browser storage or sent to the server.
+
+To resume: load the same radar inputs, dates, acquisition confirmation and zones, then choose **Restore notes** and select the exported JSON (up to 2 MiB). Restoration requires matching source/reference metadata, policy and zone details. Mismatched, duplicate or invalid notes are rejected without changing the current review. Only human annotations are restored—not measurements, classification, images or an authenticated identity. Custom polygons must be supplied again using the same GeoJSON.
+
+The default 3×3 sectors are demonstration survey areas, not farms or a cropland mask. Included examples are single observations; real temporal-pair validation remains outstanding.
 
 ## Regional hard-case showcase
 

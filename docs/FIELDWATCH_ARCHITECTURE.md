@@ -52,7 +52,7 @@ The additive `review-gates-v1` decision distinguishes a pixel measurement from a
 
 - No external map service: avoids keys and leaking user field coordinates. The image has selectable georeferenced overlays, not a global basemap. No geocoding, pan/zoom or live satellite ingestion is implemented.
 - No LLM: outputs follow inspectable policies; this is not claimed as an autonomous agent.
-- No database: local images are not intentionally retained; reviewer notes are temporary and must be exported. Collaboration and durable sessions remain future work.
+- No database: local images are not intentionally retained; reviewer notes are temporary and must be exported. Drafts survive zone selection, and replacement/leave guards warn about unexported changes. A local JSON restoration flow validates an exact analysis-context match and restores only human notes. This is not automatic persistence or authenticated collaboration; both remain future work.
 - No automatic reprojection: silent resampling could conceal bad temporal pairing. Upstream calibration/alignment are explicit responsibilities.
 - No cloud deployment now: locally bounded requests are not equivalent to production access control, resource isolation or operational reliability.
 
