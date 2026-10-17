@@ -18,7 +18,8 @@ def png(array):
 
 
 def radar_preview(raster):
-    grey = np.rint((np.clip(raster.bands[0], -30, 0) + 30) / 30 * 255).astype(np.uint8)
+    valid_band = np.where(raster.valid, raster.bands[0], -30)
+    grey = np.rint((np.clip(valid_band, -30, 0) + 30) / 30 * 255).astype(np.uint8)
     grey[~raster.valid] = 0
     return png(grey)
 

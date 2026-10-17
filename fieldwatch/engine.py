@@ -64,7 +64,7 @@ def read_raster(raw: bytes) -> Raster:
                     raise InvalidRaster("Expected negative dB backscatter, not linear power or display RGB.")
                 result = Raster(bands, valid, t, dataset.crs, hashlib.sha256(raw).hexdigest())
                 bounds = geographic_bounds(result)
-                if not all(math.isfinite(v) for v in bounds) or bounds[2] <= bounds[0] or bounds[3] <= bounds[1]:
+                if not all(math.isfinite(v) for v in bounds) or bounds[2] <= bounds[0] or bounds[3] <= bounds[1] or bounds[0] < -180 or bounds[2] > 180:
                     raise InvalidRaster("Unsupported geographic extent.")
                 if bounds[2] - bounds[0] > 2 or bounds[3] - bounds[1] > 2 or min(bounds[1], bounds[3]) < -80 or max(bounds[1], bounds[3]) > 80:
                     raise InvalidRaster("Use a local study area under 2 degrees across, between 80°S and 80°N.")
@@ -176,12 +176,14 @@ def summarize_zones(raster, classes, collection=None, new_water=None, persistent
     rows, ids = [], set()
     for index, feature in enumerate(features):
         try:
+            if not isinstance(feature, dict) or feature.get('type') != 'Feature':
+                raise ValueError()
             geometry = feature["geometry"]
             rings = geometry["coordinates"]
             if geometry["type"] != "Polygon" or len(rings) != 1 or not 4 <= len(rings[0]) <= 200:
                 raise ValueError()
             coordinates = np.asarray(rings[0], dtype=float)
-            if coordinates.shape[1] != 2 or not np.isfinite(coordinates).all() or np.any(np.abs(coordinates[:,0]) > 180) or np.any(np.abs(coordinates[:,1]) > 90):
+            if coordinates.ndim != 2 or coordinates.shape[1] != 2 or not np.isfinite(coordinates).all() or not np.array_equal(coordinates[0], coordinates[-1]) or np.any(np.abs(coordinates[:,0]) > 180) or np.any(np.abs(coordinates[:,1]) > 90):
                 raise ValueError()
             polygon = Polygon([inv @ to_grid.transform(*p) for p in coordinates])
             if not polygon.is_valid or polygon.area <= 0 or not box(0,0,w,h).intersects(polygon):
@@ -194,7 +196,7 @@ def summarize_zones(raster, classes, collection=None, new_water=None, persistent
                 raise ValueError()
             ids.add(identifier)
             name = str(properties.get("name", identifier))[:100]
-            crop = str(properties.get("crop", "unknown"))[:80]
+            crop = str(properties.get("crop", "unknown")).strip()[:80]
         except (KeyError, TypeError, ValueError, IndexError):
             raise InvalidRaster("Each zone needs a unique ID and a valid, intersecting Polygon with 4–200 lon/lat points and no holes.") from None
         clipped = polygon.intersection(box(0,0,w,h))

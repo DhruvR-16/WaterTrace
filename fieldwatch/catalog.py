@@ -1,5 +1,4 @@
 """Allowlisted public examples. No client-supplied paths or network requests."""
-import json
 import os
 from pathlib import Path
 

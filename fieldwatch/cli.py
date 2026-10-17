@@ -29,6 +29,8 @@ def main(argv=None):
     args=parser.parse_args(argv)
     try:
         zones=json.loads(bounded_read(args.zones,200_000)) if args.zones else None
+        if args.zones and (not isinstance(zones, dict) or zones.get('type') != 'FeatureCollection'):
+            raise InvalidRaster('Zones must be a GeoJSON FeatureCollection.')
         result=run_analysis(bounded_read(args.current,MAX_BYTES),observed_on=args.date,
             reference_raw=bounded_read(args.reference,MAX_BYTES) if args.reference else None,
             reference_on=args.reference_date,same_orbit=args.same_orbit,zones=zones)

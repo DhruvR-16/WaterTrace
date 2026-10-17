@@ -31,7 +31,16 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost
 @app.middleware("http")
 async def boundaries(request, call_next):
     origin = request.headers.get("origin")
-    if request.method == "POST" and origin and urlsplit(origin).netloc != request.headers.get("host"):
+    allowed_origin = True
+    if origin is not None:
+        try:
+            parsed = urlsplit(origin)
+            allowed_origin = (parsed.scheme in ('http', 'https') and parsed.scheme == request.url.scheme
+                and parsed.netloc == request.headers.get('host') and not parsed.path
+                and not parsed.query and not parsed.fragment and parsed.username is None)
+        except ValueError:
+            allowed_origin = False
+    if request.method == "POST" and not allowed_origin:
         response = JSONResponse({"detail":"Cross-origin analysis requests are not allowed."}, 403)
     else:
         response = await call_next(request)
@@ -103,7 +112,10 @@ def parse_zones(text):
     if len(text.encode('utf-8')) > 200_000:
         raise HTTPException(413, "Zone GeoJSON exceeds 200 KB.")
     try:
-        return json.loads(text)
+        value = json.loads(text)
+        if not isinstance(value, dict) or value.get('type') != 'FeatureCollection':
+            raise ValueError()
+        return value
     except (TypeError, ValueError):
         raise HTTPException(422, "Zones must be valid GeoJSON.") from None
 
@@ -117,11 +129,22 @@ async def analyze_example(identifier: str, request: Request):
         raise HTTPException(503, "Download the public demo first: python scripts/fetch_fieldwatch_data.py --split demo")
     raw_body = await request.body()
     zones = parse_zones(raw_body.decode("utf-8", errors="replace")) if raw_body else None
-    result = await run_in_threadpool(execute, radar_path(item).read_bytes(), name=item["title"], observed_on=item["date"], zones=zones)
-    result["images"]["optical"] = await run_in_threadpool(optical_preview, item)
+    def example_result():
+        try:
+            raw = radar_path(item).read_bytes()
+        except OSError:
+            raise HTTPException(503, 'Example radar is unavailable; restore the local demo data.') from None
+        return execute(raw, name=item['title'], observed_on=item['date'], zones=zones)
+    result = await run_in_threadpool(example_result)
+    try:
+        result["images"]["optical"] = await run_in_threadpool(optical_preview, item)
+    except Exception as exc:
+        logging.getLogger(__name__).warning('Optional optical preview unavailable (%s)', type(exc).__name__)
+        result['images']['optical'] = None
     result["context"] = {"dataset":"Sen1Floods11 v1.1", "chip":item["chip"], "source":"https://github.com/cloudtostreet/Sen1Floods11",
                          "attribution":"Bonafilia, Tellman, Anderson & Issenberg (2020), Cloud to Street. Contains modified Copernicus Sentinel data.",
-                         "optical_date":item["optical_date"], "optical_use":"Visual context only; no cloud mask applied, not used for classification.",
+                         "optical_date":item["optical_date"], "optical_status":"available" if result['images']['optical'] else "unavailable",
+                         "optical_use":"Visual context only; no cloud mask applied, not used for classification.",
                          "historical":True, "split":"training example; not held-out evaluation"}
     return result
 

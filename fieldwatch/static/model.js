@@ -22,10 +22,12 @@
     const [a,b,c,d,e,f] = source.transform;
     return [a*point[0]+b*point[1]+c,d*point[0]+e*point[1]+f];
   }
-  function featureFromPoints(points, source, index) {
+  function featureFromPoints(points, source, index, existingIds=[]) {
     if (points.length < 3 || points.length > 199) throw new Error('Use 3–199 corners.');
     if (points.some(([x,y]) => !Number.isFinite(x) || !Number.isFinite(y) || x<0 || y<0 || x>source.width || y>source.height)) throw new Error('Keep every corner inside the image.');
     const ring = points.map(p => pixelToGeo(p,source)); ring.push([...ring[0]]);
+    const taken=new Set(existingIds.map(String));
+    while(taken.has('drawn-'+index))index++;
     return {type:'Feature',properties:{id:'drawn-'+index,name:'Drawn review zone '+index,crop:'unknown'},geometry:{type:'Polygon',coordinates:[ring]}};
   }
   const api={statuses,areaLabel,validateResult,reviewExport,pixelToGeo,featureFromPoints};

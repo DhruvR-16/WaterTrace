@@ -94,7 +94,7 @@ function renderView() {
   $('lab-legend').hidden=view!=='errors';$('normal-legend').hidden=evaluationView;
   if(evaluationView){$('map-caption').textContent=(view==='errors'?'Evaluation only: blue = correct water, coral = false alarm, violet = missed water (including unknown predictions), grey = labeled no-water without a water prediction (including unknown), dark = unlabeled.':'Independent reference labels: blue = labeled water, grey = labeled no-water, dark = excluded NoData. Labels are not supplied to inference.')+' Selected exposed-test replay; not a new accuracy estimate.';return;}
   const note=view==='optical'?`Optical context: ${r.context.optical_date}; classification uses radar from ${r.source.observed_on}. Cloud cover is not screened in this preview.`:view==='earlier'?`Earlier radar: ${r.reference.observed_on}. The inspection queue still describes the current observation.`:'VV radar backscatter shown on a fixed −30 to 0 dB scale. Dark does not always mean water.';
-  $('map-caption').textContent=note+' Zones: '+r.zone_basis+'.';
+  $('map-caption').textContent=note+(r.context?.optical_status==='unavailable'?' Optical context is unavailable; radar analysis is unaffected.':'')+' Zones: '+r.zone_basis+'.';
 }
 function rings(geometry){return geometry.type==='MultiPolygon'?geometry.coordinates.map(p=>p[0]):[geometry.coordinates[0]];}
 function renderZones() {
@@ -146,7 +146,7 @@ function renderTimeline(){
 function stopDrawing(){state.drawing=false;state.points=[];$('draw-controls').hidden=true;$('map-stack').classList.remove('draw-mode');if(state.report)renderZones();}
 $('draw-button').addEventListener('click',()=>{state.drawing=true;state.points=[];$('draw-controls').hidden=false;$('map-stack').classList.add('draw-mode');message('Drawing replaces the illustrative grid on the first added zone. Existing session reviews are reset when zones change.');});
 $('zone-svg').addEventListener('click',event=>{if(!state.drawing)return;const box=$('zone-svg').getBoundingClientRect();state.points.push([(event.clientX-box.left)/box.width*state.report.source.width,(event.clientY-box.top)/box.height*state.report.source.height]);renderZones();});
-$('finish-draw').addEventListener('click',()=>{try{const features=state.zones?.features||[];const feature=M.featureFromPoints(state.points,state.report.source,features.length+1);state.zones={type:'FeatureCollection',features:[...features,feature]};analyze();}catch(error){message(error.message);}});
+$('finish-draw').addEventListener('click',()=>{try{const features=state.zones?.features||[];if(features.length>=100)throw new Error('Use at most 100 review zones.');const feature=M.featureFromPoints(state.points,state.report.source,features.length+1,state.report.zones.map(z=>z.id));state.zones={type:'FeatureCollection',features:[...features,feature]};analyze();}catch(error){message(error.message);}});
 $('cancel-draw').addEventListener('click',()=>{stopDrawing();message('');});
 $('import-button').addEventListener('click',()=>$('geojson-file').click());
 $('geojson-file').addEventListener('change',async event=>{const file=event.target.files[0];event.target.value='';if(!file)return;try{if(file.size>200000)throw new Error('Use a GeoJSON file under 200 KB.');const value=JSON.parse(await file.text());if(value.type!=='FeatureCollection'||!Array.isArray(value.features))throw new Error('Import a GeoJSON FeatureCollection.');state.zones=value;await analyze();}catch(error){message(error.message);}});

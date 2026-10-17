@@ -15,6 +15,10 @@ test('polygon closes and does not invent a crop',()=>{
   const f=model.featureFromPoints([[0,0],[20,0],[20,20]],{crs:'EPSG:4326',transform:[.01,0,90,0,-.01,25],width:100,height:100},1);
   assert.deepEqual(f.geometry.coordinates[0][0],f.geometry.coordinates[0].at(-1));assert.equal(f.properties.crop,'unknown');
 });
+test('drawing after an import avoids existing zone IDs',()=>{
+  const f=model.featureFromPoints([[0,0],[20,0],[20,20]],{crs:'EPSG:4326',transform:[.01,0,90,0,-.01,25],width:100,height:100},2,['drawn-2','drawn-3']);
+  assert.equal(f.properties.id,'drawn-4');
+});
 test('short or outside polygons rejected',()=>{
   assert.throws(()=>model.featureFromPoints([[0,0]],{},1));
   assert.throws(()=>model.featureFromPoints([[0,0],[20,0],[200,20]],{width:100,height:100},1));
