@@ -27,7 +27,7 @@ Values are computed from current inference, not inserted as UI fixtures. Water p
 |---|---|
 | New-water candidate | Detect a candidate from a matched earlier dry/current wet pair; no damage or duration claim |
 | Water at both dates | No new-water candidate; two endpoints do not establish permanent water |
-| Missing earlier pixels | Earlier unknown pixels must not become evidence of previously dry land |
+| Missing earlier pixels | Keep water without a baseline visible; zero new-water candidates must not imply no new flooding |
 | Rice / paddy context | Ask for crop stage and intentional inundation context; do not infer crop loss |
 | Conflicting radar bands | Preserve unknowns and withhold whole-zone conclusions |
 | Four-pixel zone | Keep measurements inspectable but fail the resolution gate |
@@ -43,6 +43,7 @@ These artificial 96×96 scenes exercise the actual ingestion/classification/repo
 2. Open the stronger India replay. Show the selection disclosure before discussing its numbers. Switch between radar, reference labels and errors.
 3. Show Sri Lanka next: contrast 99.6% precision with 1.0% recall and the violet missed-water map. Abstention is not free accuracy.
 4. Run tiny-zone, paddy-context and partial-zone exercises. Show the field-level review gate even when water-like pixels exist. In partial-zone, the detail panel explicitly says **Partial**; a high assessed fraction inside the image cannot fill the missing edge.
+   Then run **Missing earlier pixels** and select **Survey sector 5**: the current image is fully assessed, but paired assessability is zero. All its current water appears as **Water without earlier baseline**, and the gate is **BASELINE REQUIRED**. Compare with **Water at both dates**: repeated water still does not prove permanence or continuous flooding.
 5. Run shifted-grid after a successful report: the old map disappears, metrics clear, and export becomes unavailable.
 6. Return to a normal example. Export a review with dates, source hashes, policy and human notes. Export before changing cases; notes are session-only.
 
