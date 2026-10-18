@@ -56,6 +56,20 @@ def test_longitude_outside_geographic_domain_rejected():
     with pytest.raises(InvalidRaster):read_raster(encode(data,Affine(.0001,0,292,0,-.0001,26)))
 
 
+@pytest.mark.parametrize('mutation', ['numeric_strings', 'booleans'])
+def test_coordinate_coercion_cannot_leave_invalid_geometry_in_reports(mutation):
+    raw,_=synthetic_inputs('new-water');zones=default_zones(read_raster(raw))
+    ring=zones['features'][0]['geometry']['coordinates'][0]
+    ring=[list(point) for point in ring]
+    if mutation=='numeric_strings':
+        ring=[[str(value) for value in point] for point in ring]
+    else:
+        ring[0][0]=ring[-1][0]=True
+    zones['features'][0]['geometry']['coordinates'][0]=ring
+    with pytest.raises(InvalidRaster,match='lon/lat'):
+        run_analysis(raw,zones=zones)
+
+
 def test_nan_preview_does_not_emit_numeric_warning():
     data=np.full((2,96,96),-30,np.float32);data[:,30:40,30:40]=np.nan
     with warnings.catch_warnings():

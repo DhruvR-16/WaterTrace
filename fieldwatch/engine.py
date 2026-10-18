@@ -182,6 +182,11 @@ def summarize_zones(raster, classes, collection=None, new_water=None, persistent
             rings = geometry["coordinates"]
             if geometry["type"] != "Polygon" or len(rings) != 1 or not 4 <= len(rings[0]) <= 200:
                 raise ValueError()
+            # Do not let NumPy coerce strings/bools into accepted coordinates:
+            # the original geometry is retained in reports and geographic exports.
+            if any(isinstance(value, bool) or not isinstance(value, (int, float))
+                   for point in rings[0] for value in point):
+                raise ValueError()
             coordinates = np.asarray(rings[0], dtype=float)
             if coordinates.ndim != 2 or coordinates.shape[1] != 2 or not np.isfinite(coordinates).all() or not np.array_equal(coordinates[0], coordinates[-1]) or np.any(np.abs(coordinates[:,0]) > 180) or np.any(np.abs(coordinates[:,1]) > 90):
                 raise ValueError()
