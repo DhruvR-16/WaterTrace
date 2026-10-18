@@ -31,6 +31,7 @@ CASES = [
     {'id':'paddy-context','title':'Rice / paddy context','kind':'synthetic', 'question':'Does water automatically mean damaged rice?', 'lesson':'Request crop-stage and irrigation context; do not turn a water signal into a crop-loss finding.'},
     {'id':'polarization-conflict','title':'Conflicting radar bands','kind':'synthetic', 'question':'What if VV looks dry but VH looks wet?', 'lesson':'Disagreement remains unknown, and whole-zone interpretation is withheld.'},
     {'id':'tiny-zone','title':'Sub-resolution field','kind':'synthetic', 'question':'Should a four-pixel polygon receive a field-level conclusion?', 'lesson':'Keep pixel measurements inspectable, but explicitly fail the resolution gate.'},
+    {'id':'partial-zone','title':'Just outside the image','kind':'synthetic', 'question':'Does a zone with less than 1% outside the image still get a whole-field warning?', 'lesson':'Yes. A small missing edge is still missing evidence. Measurements cover only image overlap, not the entire boundary.'},
     {'id':'shifted-grid','title':'Misaligned image pair','kind':'synthetic', 'question':'What if dates match but the pixel grids are shifted?', 'lesson':'Reject the comparison before producing a misleading change map.'},
     {'id':'nodata-scene','title':'Unusable radar scene','kind':'synthetic', 'question':'Does an all-NoData scene become a safe-looking map?', 'lesson':'Reject the observation; do not produce a no-water conclusion.'},
 ]
@@ -77,6 +78,9 @@ def synthetic_inputs(identifier):
     if identifier=='tiny-zone':
         options['zones']={'type':'FeatureCollection','features':[{'type':'Feature','properties':{'id':'tiny','name':'Synthetic four-pixel zone'},
             'geometry':{'type':'Polygon','coordinates':[[[92.004,25.996],[92.0042,25.996],[92.0042,25.9958],[92.004,25.9958],[92.004,25.996]]]}}]}
+    if identifier=='partial-zone':
+        options['zones']={'type':'FeatureCollection','features':[{'type':'Feature','properties':{'id':'partial','name':'Synthetic partially covered zone'},
+            'geometry':{'type':'Polygon','coordinates':[[[92.001,25.999],[92.00965,25.999],[92.00965,25.991],[92.001,25.991],[92.001,25.999]]]}}]}
     return raw,options
 
 
@@ -136,6 +140,7 @@ def run_case(identifier):
             'paddy-context':('Require rice context',lambda:any(z['decision']['level']=='context_required' for z in zones)),
             'polarization-conflict':('Withhold whole-zone conclusions',lambda:all(z['decision']['level']=='insufficient_evidence' for z in zones)),
             'tiny-zone':('Withhold a sub-resolution conclusion',lambda:all(z['pixels']<25 and z['decision']['level']=='insufficient_evidence' for z in zones)),
+            'partial-zone':('Withhold a whole-zone conclusion for a missing edge under 1%',lambda:all(z['spatial_support']['scene_clipped'] and .99<z['spatial_support']['scene_overlap_fraction']<1 and z['decision']['level']=='insufficient_evidence' for z in zones)),
             'shifted-grid':('Reject a shifted grid',lambda:False),'nodata-scene':('Reject missing input',lambda:False)}
         name,check=checks[identifier]
         info['checks']=[{'name':name,'passed':bool(check())},

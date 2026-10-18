@@ -14,7 +14,7 @@ def review_decision(zone, paired):
     # Engine reasons use unrounded coverage; display rounding must not clear a gate.
     if zone['coverage'] < .7 or any('More than 30%' in reason for reason in zone['reasons']):
         reasons.append('More than 30% is uncertain; obtain another observation or independent evidence.')
-    if any('outside the scene' in reason for reason in zone['reasons']):
+    if (zone.get('spatial_support') or {}).get('scene_clipped') or any('outside the scene' in reason for reason in zone['reasons']):
         reasons.append('Only part of this zone is covered by the image.')
     if reasons:
         level, next_step = 'insufficient_evidence', 'Resolve coverage or resolution before prioritizing this as a whole field.'
@@ -31,4 +31,4 @@ def review_decision(zone, paired):
     if not paired:
         reasons.append('Without an earlier matched observation, flood onset is not established.')
     return {'level':level, 'next_step':next_step, 'reasons':reasons,
-            'withheld_claims':list(WITHHELD), 'policy':'review-gates-v1'}
+            'withheld_claims':list(WITHHELD), 'policy':'review-gates-v2'}

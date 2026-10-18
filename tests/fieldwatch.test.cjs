@@ -206,3 +206,29 @@ test('GeoJSON control produces nothing while a request is pending or no report e
   assert.equal(ui.captured.blob,null);
   ui.run('state.controller=null;state.report=null');ui.get('geojson-export-button').click();assert.equal(ui.captured.blob,null);
 });
+test('GeoJSON keeps boundary clipping separate from pixel assessability',()=>{
+  const report=reviewFixture();report.zones[0].coverage=1;
+  report.zones[0].spatial_support={scene_clipped:true,scene_overlap_fraction:.995,
+    fraction_basis:'planar_polygon_area_in_raster_grid',boundary_tolerance_pixels:1e-7};
+  const props=model.geojsonExport(report).features[0].properties;
+  assert.equal(props.assessed_fraction,1);assert.equal(props.scene_clipped,true);
+  assert.equal(props.scene_overlap_fraction,.995);assert.equal(props.scene_overlap_fraction_basis,'planar_polygon_area_in_raster_grid');
+  assert.equal(props.boundary_tolerance_pixels,1e-7);
+});
+test('older report exports do not invent full boundary coverage',()=>{
+  const props=model.geojsonExport(reviewFixture()).features[0].properties;
+  assert.equal(props.scene_clipped,null);assert.equal(props.scene_overlap_fraction,null);
+});
+test('review detail labels partial boundaries even when the stored fraction rounds to one',async()=>{
+  const ui=await reviewUI();
+  ui.run("state.report.zones[0].spatial_support={scene_clipped:true,scene_overlap_fraction:1};renderDetail()");
+  const stats=ui.get('zone-stats').children;
+  assert.equal(stats[2].children[1],'Uncertain within overlap');
+  assert.equal(stats[3].children[0].textContent,'Partial');
+  assert.equal(stats[3].children[1],'Boundary coverage (not pixel quality)');
+});
+test('new spatial support must match before old review notes can be restored',()=>{
+  const report=reviewFixture(),saved=model.reviewExport(report,{a:savedReview});
+  const current=JSON.parse(JSON.stringify(report));current.zones[0].spatial_support={scene_clipped:true};
+  assert.throws(()=>model.restoreReviews(current,saved),/does not match/);
+});

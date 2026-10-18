@@ -145,7 +145,8 @@ function renderDetail(){
   $('detail-title').textContent=z.name;$('detail-reason').textContent=z.reasons.join(' ');
   $('decision-gate').hidden=!z.decision;
   if(z.decision){$('decision-level').textContent=z.decision.level.replaceAll('_',' ').toUpperCase();$('decision-next').textContent=z.decision.next_step;$('decision-reasons').textContent=z.decision.reasons.join(' ');}
-  const stats=[[M.areaLabel(z.area_ha)+' ha','Scene overlap'],[M.areaLabel(z.water_observed_ha)+' ha','Water-like evidence'],[percent(1-z.coverage),'Uncertain']];
+  const stats=[[M.areaLabel(z.area_ha)+' ha','Scene overlap'],[M.areaLabel(z.water_observed_ha)+' ha','Water-like evidence'],[percent(1-z.coverage),'Uncertain within overlap']];
+  if(z.spatial_support)stats.push([z.spatial_support.scene_clipped?'Partial':'Within image','Boundary coverage (not pixel quality)']);
   if(z.new_water_candidate_ha!==null)stats.push([M.areaLabel(z.new_water_candidate_ha)+' ha','New water candidate'],[M.areaLabel(z.repeat_water_observed_ha)+' ha','Water at both observations']);
   $('zone-stats').replaceChildren(...stats.map(([value,label])=>{const item=element('span');item.append(element('strong',value),document.createTextNode(label));return item;}));
   const review=state.reviews[z.id];$('review-outcome').value=review?.outcome||'unreviewed';$('review-note').value=review?.note||'';

@@ -20,7 +20,7 @@ from fieldwatch.service import run_analysis
 
 
 CASES = ['new-water', 'repeat-water', 'missing-earlier', 'paddy-context',
-         'polarization-conflict', 'tiny-zone']
+         'polarization-conflict', 'tiny-zone', 'partial-zone']
 
 
 @pytest.mark.parametrize('identifier', CASES)
@@ -45,6 +45,9 @@ def test_export_preserves_measurements_and_gates_without_images(identifier):
         assert props['review_gate'] == zone['decision']['level']
         assert props['withheld_claims'] == zone['decision']['withheld_claims']
         assert props['source_sha256'] == report['source']['sha256']
+        assert props['scene_clipped'] == zone['spatial_support']['scene_clipped']
+        assert props['scene_overlap_fraction'] == zone['spatial_support']['scene_overlap_fraction']
+        assert props['scene_overlap_fraction_basis'] == zone['spatial_support']['fraction_basis']
         assert props['human_outcome'] is None
         assert props['human_review_unverified'] is True
     assert 'data:image/' not in json.dumps(exported)

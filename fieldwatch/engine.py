@@ -19,6 +19,7 @@ from shapely.geometry import Polygon, box, mapping
 MAX_BYTES = 24 * 1024 * 1024
 MAX_PIXELS = 2_000_000
 POLICY = "surface-water-screen-v1"
+BOUNDARY_TOLERANCE_PIXELS = 1e-7  # Coordinate roundoff only, not an allowed missing-area percentage.
 GEOD = Geod(ellps="WGS84")
 
 
@@ -173,6 +174,9 @@ def summarize_zones(raster, classes, collection=None, new_water=None, persistent
     inv = ~raster.transform
     h, w = raster.dimensions
     area = pixel_areas(raster)
+    scene = box(0, 0, w, h)
+    tolerance = BOUNDARY_TOLERANCE_PIXELS
+    scene_with_roundoff = box(-tolerance, -tolerance, w+tolerance, h+tolerance)
     rows, ids = [], set()
     for index, feature in enumerate(features):
         try:
@@ -204,7 +208,14 @@ def summarize_zones(raster, classes, collection=None, new_water=None, persistent
             crop = str(properties.get("crop", "unknown")).strip()[:80]
         except (KeyError, TypeError, ValueError, IndexError):
             raise InvalidRaster("Each zone needs a unique ID and a valid, intersecting Polygon with 4–200 lon/lat points and no holes.") from None
-        clipped = polygon.intersection(box(0,0,w,h))
+        clipped = polygon.intersection(scene)
+        scene_clipped = not scene_with_roundoff.covers(polygon)
+        spatial_support = {
+            'scene_clipped': scene_clipped,
+            'scene_overlap_fraction': round(min(1.0, max(0.0, clipped.area / polygon.area)), 8),
+            'fraction_basis': 'planar_polygon_area_in_raster_grid',
+            'boundary_tolerance_pixels': tolerance,
+        }
         mask = rasterize([(mapping(clipped), 1)], out_shape=(h,w), fill=0).astype(bool)
         total = float(area[mask].sum())
         if not total:
@@ -217,7 +228,7 @@ def summarize_zones(raster, classes, collection=None, new_water=None, persistent
             reasons.append("Too few pixels for a field-level assessment.")
         if coverage < .7:
             reasons.append("More than 30% of this zone is uncertain or unobserved.")
-        if clipped.area < polygon.area * .99:
+        if scene_clipped:
             reasons.append("Zone extends outside the scene; estimates cover only the overlap.")
         if crop.lower() in ("rice", "paddy"):
             reasons.append("Intentional paddy inundation cannot be distinguished from flood exposure here.")
@@ -232,6 +243,7 @@ def summarize_zones(raster, classes, collection=None, new_water=None, persistent
         row = {"id": identifier, "name": name, "crop": crop, "status": status, "reasons": reasons,
                "area_ha": round(total, 3), **{k: round(v, 3) for k,v in values.items()},
                "coverage": round(coverage,4), "water_fraction": round(water_fraction,4), "pixels": int(mask.sum()),
+               "spatial_support": spatial_support,
                "new_water_candidate_ha": round(float(area[mask & new_water].sum()),3) if new_water is not None else None,
                "repeat_water_observed_ha": round(float(area[mask & persistent].sum()),3) if persistent is not None else None,
                "pixel_geometry": mapping(clipped), "geometry": geometry}

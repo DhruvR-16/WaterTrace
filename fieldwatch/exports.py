@@ -18,6 +18,7 @@ def geojson_export(report, reviews=None):
     features = []
     for zone in report['zones']:
         decision = zone.get('decision') or {}
+        support = zone.get('spatial_support') or {}
         review = reviews.get(zone['id']) or {}
         properties = {key: zone.get(key) for key in (
             'id', 'name', 'crop', 'water_observed_ha', 'uncertain_ha',
@@ -27,6 +28,10 @@ def geojson_export(report, reviews=None):
             'review_queue': zone.get('status'),
             'scene_overlap_ha': zone.get('area_ha'),
             'assessed_fraction': zone.get('coverage'),
+            'scene_clipped': support.get('scene_clipped'),
+            'scene_overlap_fraction': support.get('scene_overlap_fraction'),
+            'scene_overlap_fraction_basis': support.get('fraction_basis'),
+            'boundary_tolerance_pixels': support.get('boundary_tolerance_pixels'),
             'geometry_role': 'review_zone_boundary_not_water_mask',
             'area_scope': 'scene_overlap_pixel_centers',
             'area_notice': 'Measurements cover only scene overlap, not necessarily the full boundary. Zones may overlap; do not sum as unique affected land.',

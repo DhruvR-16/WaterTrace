@@ -22,11 +22,13 @@
   }
   function geojsonExport(report, reviews={}) {
     const features=report.zones.map(zone=>{
-      const decision=zone.decision||{},review=Object.hasOwn(reviews,zone.id)?reviews[zone.id]:{};
+      const decision=zone.decision||{},support=zone.spatial_support||{},review=Object.hasOwn(reviews,zone.id)?reviews[zone.id]:{};
       const properties=Object.fromEntries(['id','name','crop','water_observed_ha','uncertain_ha',
         'no_water_detected_ha','water_fraction','pixels','new_water_candidate_ha','repeat_water_observed_ha'].map(k=>[k,zone[k]??null]));
       Object.assign(properties,{
         review_queue:zone.status??null,scene_overlap_ha:zone.area_ha??null,assessed_fraction:zone.coverage??null,
+        scene_clipped:support.scene_clipped??null,scene_overlap_fraction:support.scene_overlap_fraction??null,
+        scene_overlap_fraction_basis:support.fraction_basis??null,boundary_tolerance_pixels:support.boundary_tolerance_pixels??null,
         geometry_role:'review_zone_boundary_not_water_mask',area_scope:'scene_overlap_pixel_centers',
         area_notice:'Measurements cover only scene overlap, not necessarily the full boundary. Zones may overlap; do not sum as unique affected land.',
         zone_basis:report.zone_basis??null,review_gate:decision.level??null,review_next_step:decision.next_step??null,
