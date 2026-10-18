@@ -41,6 +41,8 @@ Version 0.5 adds explicit boundary-coverage metadata and `review-gates-v2`. Olde
 
 The default 3×3 sectors are demonstration survey areas, not farms or a cropland mask. Included examples are single observations; real temporal-pair validation remains outstanding.
 
+Zone inputs are limited to 200 KB, 100 polygons and 200 coordinates per polygon. Use unique JSON object keys, finite numeric values and nesting no deeper than 32 levels. Raw GeoJSON/CLI files must be UTF-8; legitimate multilingual names and emoji are supported. Invalid Unicode, ambiguous duplicate keys and oversized coordinate values are rejected with a validation error, not a report. Only validated polygon coordinates are retained from geometry objects; unrelated embedded geometry metadata is not copied into exports.
+
 ### Choose the right export
 
 | Control | Purpose | What it does not do |
@@ -98,7 +100,7 @@ mkdir -p artifacts
   --date 2016-08-12 --output artifacts/india-review.json
 ```
 
-Use `--reference earlier.tif --reference-date YYYY-MM-DD --same-orbit` for a verified matching pair, and `--zones zones.geojson` for your own review polygons. Output is created with mode `0600` on POSIX. Exit codes: `0` saved, `2` invalid/unreadable input or output error, `3` output already exists. A saved report is not a safety clearance.
+Use `--reference earlier.tif --reference-date YYYY-MM-DD --same-orbit` for a verified matching pair, and `--zones zones.geojson` for your own review polygons. Output is created with mode `0600` on POSIX. Reports are fully written and flushed to a private temporary file in the output directory, then published without replacing an existing path—including symlinks. A handled write/publication failure removes the temporary file and does not create a partial report. This requires filesystem hard-link support; unsupported filesystems return an output error. A process crash can leave a private `.fieldwatch-*.tmp` file, and power-loss durability is not guaranteed. Exit codes: `0` saved, `2` invalid/unreadable input or output error, `3` output already exists. A saved report is not a safety clearance.
 
 To create a geographic handoff instead, add `--format geojson` and choose a new output path such as `--output artifacts/india-zones.geojson`. The default remains `--format json`. CLI exports contain no browser-session notes; use the browser export to include those annotations. Both formats omit raster/preview payloads, but coordinates and notes can still disclose sensitive information.
 
