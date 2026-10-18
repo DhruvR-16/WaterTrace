@@ -1,4 +1,4 @@
-name: Verify Inundra
+name: Verify WaterTrace
 
 on:
   push:
@@ -38,16 +38,16 @@ jobs:
       - name: Synthetic contract and frontend tests
         run: |
           python -m pytest -q
-          python scripts/check_inundra_lab.py
-          node --check inundra/static/app.js
-          node --check inundra/static/model.js
-          node --test tests/inundra.test.cjs
+          python scripts/check_watertrace_lab.py
+          node --check watertrace/static/app.js
+          node --check watertrace/static/model.js
+          node --test tests/watertrace.test.cjs
       - name: Build and smoke-test local-only container
         run: |
-          docker build -t inundra:ci .
-          docker run -d --rm --name inundra-ci --read-only --tmpfs /tmp:rw,nosuid,size=128m --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8000:8000 inundra:ci
-          python scripts/smoke_inundra.py
-          test "$(docker exec inundra-ci id -u)" != "0"
+          docker build -t watertrace:ci .
+          docker run -d --rm --name watertrace-ci --read-only --tmpfs /tmp:rw,nosuid,size=128m --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8000:8000 watertrace:ci
+          python scripts/smoke_watertrace.py
+          test "$(docker exec watertrace-ci id -u)" != "0"
       - name: Stop test container
         if: always()
-        run: docker stop inundra-ci || true
+        run: docker stop watertrace-ci || true

@@ -1,10 +1,10 @@
-# Inundra
+# WaterTrace
 
 **Satellite evidence. Grounded decisions.** A local satellite-image workspace for reviewing possible surface-water exposure and deciding where human inspection needs more evidence.
 
-Inundra (pronounced *in-UN-dra*) is a coined name inspired by inundation. It reflects the project's focus on reviewing water evidence, without implying an automated flood warning or verified crop-damage diagnosis.
+WaterTrace helps reviewers trace satellite water evidence across observations, without implying an automated flood warning or verified crop-damage diagnosis.
 
-Repository: [DhruvR-16/inundra](https://github.com/DhruvR-16/inundra).
+Repository: [DhruvR-16/WaterTrace](https://github.com/DhruvR-16/WaterTrace).
 
 Built for a proposed farming-cooperative / NGO post-flood workflow: **water observations and missing evidence go into separate review queues.** A missing observation must not look like a safe field. No sensors, API keys, cloud account, or AI subscription are needed for the local examples.
 
@@ -12,13 +12,13 @@ Built for a proposed farming-cooperative / NGO post-flood workflow: **water obse
 
 ## Run locally
 
-### Upgrading from FieldWatch
+### Upgrading from earlier names
 
-Version 0.8 renames the application and package to **Inundra**. Use the commands below, `INUNDRA_DATA` / `INUNDRA_DEPLOYMENT` instead of the former `FIELDWATCH_*` variables, and `data/inundra/` for the default cache. Existing clones should update their origin to `https://github.com/DhruvR-16/inundra.git`. Stop any old running server and restart with `inundra.main:app`.
+Version 0.9 adopts the final name **WaterTrace** (previously Inundra / FieldWatch). Use the commands below, `WATERTRACE_DATA` / `WATERTRACE_DEPLOYMENT` instead of the former `INUNDRA_*` or `FIELDWATCH_*` variables, and `data/watertrace/` for the default cache. Existing clones should update their origin to `https://github.com/DhruvR-16/WaterTrace.git`. Stop any old running server and restart with `watertrace.main:app`.
 
-For other checkouts, move the existing `data/fieldwatch/` cache to `data/inundra/` only if the destination does not already exist, or set `INUNDRA_DATA` to the old cache's absolute path. Do not merge or overwrite datasets. This workspace's cache has already been moved without changing its contents. The local checkout folder name need not match the repository name; leaving it in place preserves virtual-environment paths.
+For other checkouts, move the existing `data/inundra/` or `data/fieldwatch/` cache to `data/watertrace/` only if the destination does not already exist, or set `WATERTRACE_DATA` to the old cache's absolute path. Do not merge or overwrite datasets. This workspace's cache has already been moved without changing its contents. The local checkout folder name need not match the repository name; leaving it in place preserves virtual-environment paths.
 
-New geographic exports use the `inundra` metadata member and `geojson-review-v2` schema (formerly `fieldwatch` / `geojson-review-v1`). Consumers must update that metadata lookup; geometry, measurements and classification policies are unchanged. The benchmark's method key is likewise now `inundra`, with unchanged counts and source hashes. Matching v0.7 full review JSON files can still restore notes because branding is not part of the analysis-context comparison; earlier incompatible policy/zone contexts remain rejected. Existing exports and Git history are not rewritten, and legacy temporary-file patterns remain ignored for safety.
+New geographic exports use the `watertrace` metadata member and `geojson-review-v3` schema (previously `inundra` / `geojson-review-v2`, originally `fieldwatch` / `geojson-review-v1`). Consumers must update that metadata lookup; geometry, measurements and classification policies are unchanged. The benchmark's method key is likewise now `watertrace`, with unchanged counts and source hashes. Matching v0.7 and v0.8 full review JSON files can still restore notes because branding is not part of the analysis-context comparison; earlier incompatible policy/zone contexts remain rejected. Existing exports and Git history are not rewritten, and legacy temporary-file patterns remain ignored for safety.
 
 ### Setup
 
@@ -27,11 +27,11 @@ Python 3.13 is the tested version. From the repository root:
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python scripts/fetch_inundra_data.py --split demo
-.venv/bin/python -m uvicorn inundra.main:app --host 127.0.0.1 --port 8000
+.venv/bin/python scripts/fetch_watertrace_data.py --split demo
+.venv/bin/python -m uvicorn watertrace.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open [the local workspace](http://127.0.0.1:8000). Stop with `Ctrl+C`. The download is about 11 MB and is saved under ignored `data/inundra/`. After downloading, these examples and all analysis run offline. For Windows, substitute `.venv\Scripts\python.exe`; Windows has not been verified.
+Open [the local workspace](http://127.0.0.1:8000). Stop with `Ctrl+C`. The download is about 11 MB and is saved under ignored `data/watertrace/`. After downloading, these examples and all analysis run offline. For Windows, substitute `.venv\Scripts\python.exe`; Windows has not been verified.
 
 Without downloading, upload your own **trusted, north-up, calibrated VV/VH dB GeoTIFF**. Exactly two bands (VV, VH), at most 24 MiB and 2 million pixels, at least 16×16, with a CRS and local extent. Calibration and terrain correction happen upstream; the app cannot verify them from pixel values alone.
 
@@ -79,11 +79,11 @@ GeoJSON export deliberately leaves the unexported-notes warning active; also sav
 The scope is selected historical observations, not nationwide or worldwide monitoring. The Evidence Lab's nine synthetic exercises work without downloads. To enable its four real replays, download about 6.8 MB of radar, labels and metadata:
 
 ```sh
-.venv/bin/python scripts/fetch_inundra_data.py --split lab
-.venv/bin/python scripts/check_inundra_lab.py
+.venv/bin/python scripts/fetch_watertrace_data.py --split lab
+.venv/bin/python scripts/check_watertrace_lab.py
 ```
 
-Open **Evidence Lab** in the top bar. Test missing earlier pixels, repeated water, paddy context, four-pixel fields, a field just outside the image, conflicting radar, shifted grids and all-NoData inputs. A rejection produces no map, queue or export. Synthetic success demonstrates software contracts, not flood-detection accuracy. Read the [showcase guide and selection disclosure](docs/INUNDRA_SHOWCASE.md).
+Open **Evidence Lab** in the top bar. Test missing earlier pixels, repeated water, paddy context, four-pixel fields, a field just outside the image, conflicting radar, shifted grids and all-NoData inputs. A rejection produces no map, queue or export. Synthetic success demonstrates software contracts, not flood-detection accuracy. Read the [showcase guide and selection disclosure](docs/WATERTRACE_SHOWCASE.md).
 
 ## Evidence, not a headline accuracy score
 
@@ -91,20 +91,20 @@ The initial fixed policy was evaluated on all **90 chips in the Sen1Floods11 v1.
 
 | Method | Water precision | Water recall | Water IoU | Assessed labeled pixels |
 |---|---:|---:|---:|---:|
-| Inundra v1 | 75.6% | 52.9% | 45.1% | 68.6% |
+| WaterTrace v1 | 75.6% | 52.9% | 45.1% | 68.6% |
 | Single-band VH Otsu baseline | 25.5% | 72.2% | 23.2% | 99.6% |
 
-**Interpretation:** fewer false positives and better pooled overlap than this simple baseline, but substantially more missed water. Performance varies sharply by event; Inundra's IoU is worse than the baseline in Pakistan and Sri Lanka. These are pixel-level water labels, **not evidence of crop-loss accuracy, time saved, or successful field inspections**. The test split is not event-disjoint from the dataset's training scenes and is now exposed for future development. See [benchmark protocol and all event results](docs/INUNDRA_BENCHMARK.md).
+**Interpretation:** fewer false positives and better pooled overlap than this simple baseline, but substantially more missed water. Performance varies sharply by event; WaterTrace's IoU is worse than the baseline in Pakistan and Sri Lanka. These are pixel-level water labels, **not evidence of crop-loss accuracy, time saved, or successful field inspections**. The test split is not event-disjoint from the dataset's training scenes and is now exposed for future development. See [benchmark protocol and all event results](docs/WATERTRACE_BENCHMARK.md).
 
 ## Verify and reproduce
 
 ```sh
 .venv/bin/python -m pip install -r requirements-dev.txt
 .venv/bin/python -m pytest -q
-.venv/bin/python scripts/check_inundra_lab.py
-node --test tests/inundra.test.cjs
-.venv/bin/python scripts/fetch_inundra_data.py --split test
-.venv/bin/python scripts/evaluate_inundra.py --split test --output artifacts/my-evaluation.json
+.venv/bin/python scripts/check_watertrace_lab.py
+node --test tests/watertrace.test.cjs
+.venv/bin/python scripts/fetch_watertrace_data.py --split test
+.venv/bin/python scripts/evaluate_watertrace.py --split test --output artifacts/my-evaluation.json
 ```
 
 The test download is about 147 MB. The evaluator refuses to replace an existing output file. Unit tests use self-generated rasters and need no network. Node 22+ is only needed for optional frontend tests; there is no frontend build step.
@@ -113,12 +113,12 @@ CLI example (after downloading the demos):
 
 ```sh
 mkdir -p artifacts
-.venv/bin/python -m inundra.cli \
-  data/inundra/data/flood_events/HandLabeled/S1Hand/India_285297_S1Hand.tif \
+.venv/bin/python -m watertrace.cli \
+  data/watertrace/data/flood_events/HandLabeled/S1Hand/India_285297_S1Hand.tif \
   --date 2016-08-12 --output artifacts/india-review.json
 ```
 
-Use `--reference earlier.tif --reference-date YYYY-MM-DD --same-orbit` for a verified matching pair, and `--zones zones.geojson` for your own review polygons. Output is created with mode `0600` on POSIX. Reports are fully written and flushed to a private temporary file in the output directory, then published without replacing an existing path—including symlinks. A handled write/publication failure removes the temporary file and does not create a partial report. This requires filesystem hard-link support; unsupported filesystems return an output error. A process crash can leave a private `.inundra-*.tmp` file, and power-loss durability is not guaranteed. Exit codes: `0` saved, `2` invalid/unreadable input or output error, `3` output already exists. A saved report is not a safety clearance.
+Use `--reference earlier.tif --reference-date YYYY-MM-DD --same-orbit` for a verified matching pair, and `--zones zones.geojson` for your own review polygons. Output is created with mode `0600` on POSIX. Reports are fully written and flushed to a private temporary file in the output directory, then published without replacing an existing path—including symlinks. A handled write/publication failure removes the temporary file and does not create a partial report. This requires filesystem hard-link support; unsupported filesystems return an output error. A process crash can leave a private `.watertrace-*.tmp` file, and power-loss durability is not guaranteed. Exit codes: `0` saved, `2` invalid/unreadable input or output error, `3` output already exists. A saved report is not a safety clearance.
 
 To create a geographic handoff instead, add `--format geojson` and choose a new output path such as `--output artifacts/india-zones.geojson`. The default remains `--format json`. CLI exports contain no browser-session notes; use the browser export to include those annotations. Both formats omit raster/preview payloads, but coordinates and notes can still disclose sensitive information.
 
@@ -137,20 +137,20 @@ Independent label rasters → evaluator / explicit Evidence Lab scoring AFTER in
                            (never classification or review-queue inputs)
 ```
 
-See [technical design](docs/INUNDRA_ARCHITECTURE.md), [security boundaries](SECURITY.md), and [competition / portfolio readiness](docs/INUNDRA_READINESS.md).
+See [technical design](docs/WATERTRACE_ARCHITECTURE.md), [security boundaries](SECURITY.md), and [competition / portfolio readiness](docs/WATERTRACE_READINESS.md).
 
-The default Dockerfile packages Inundra without datasets or credentials. It is prepared for local testing; **a container build/run has not yet been verified because the local Docker daemon is unavailable**. No AWS resources have been created. No AWS, Graviton, or COOL performance claim is made.
+The default Dockerfile packages WaterTrace without datasets or credentials. It is prepared for local testing; **a container build/run has not yet been verified because the local Docker daemon is unavailable**. No AWS resources have been created. No AWS, Graviton, or COOL performance claim is made.
 
 ```sh
-docker build -t inundra:local .
+docker build -t watertrace:local .
 docker run --rm --read-only --tmpfs /tmp:rw,nosuid,size=128m \
   --cap-drop ALL --security-opt no-new-privileges \
   -p 127.0.0.1:8000:8000 \
-  -v "$PWD/data/inundra:/data:ro" inundra:local
+  -v "$PWD/data/watertrace:/data:ro" watertrace:local
 ```
 
 ## Data and attribution
 
-Examples and evaluation use [Sen1Floods11](https://github.com/cloudtostreet/Sen1Floods11), Bonafilia, Tellman, Anderson & Issenberg (2020), Cloud to Street; contains modified Copernicus Sentinel data. Downloads are kept outside Git. The upstream repository's licensing/redistribution terms need confirmation before distributing its rasters or derived previews; public access alone is not a redistribution license. See [data provenance](docs/INUNDRA_DATA.md). The repository's code license does not grant rights to third-party data.
+Examples and evaluation use [Sen1Floods11](https://github.com/cloudtostreet/Sen1Floods11), Bonafilia, Tellman, Anderson & Issenberg (2020), Cloud to Street; contains modified Copernicus Sentinel data. Downloads are kept outside Git. The upstream repository's licensing/redistribution terms need confirmation before distributing its rasters or derived previews; public access alone is not a redistribution license. See [data provenance](docs/WATERTRACE_DATA.md). The repository's code license does not grant rights to third-party data.
 
-This branch contains Inundra only. The previous ChartCourt project is recoverable from [`codex/chartcourt-v0.3`](https://github.com/DhruvR-16/inundra/tree/codex/chartcourt-v0.3) and Git history; its app, samples, tests and documents are no longer included in `main`.
+This branch contains WaterTrace only. The previous ChartCourt project is recoverable from [`codex/chartcourt-v0.3`](https://github.com/DhruvR-16/WaterTrace/tree/codex/chartcourt-v0.3) and Git history; its app, samples, tests and documents are no longer included in `main`.

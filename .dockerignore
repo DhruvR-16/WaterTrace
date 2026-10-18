@@ -1,8 +1,8 @@
 # Only the runtime dependencies and app belong in the build context.
 **
 !requirements.txt
-!inundra/
-!inundra/**
+!watertrace/
+!watertrace/**
 
 # Keep nested local files out of the application, too.
 **/__pycache__/
@@ -20,5 +20,6 @@
 **/credentials*.json
 **/client_secret*.json
 **/service-account*.json
+**/.watertrace-*.tmp
 **/.inundra-*.tmp
 **/.fieldwatch-*.tmp

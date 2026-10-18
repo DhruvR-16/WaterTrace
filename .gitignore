@@ -49,8 +49,9 @@ logs/
 *.db
 tmp/
 temp/
-.inundra-*.tmp
+.watertrace-*.tmp
 # Preserve protection for staging files left by pre-rename versions.
+.inundra-*.tmp
 .fieldwatch-*.tmp
 
 # Editor and operating-system files
