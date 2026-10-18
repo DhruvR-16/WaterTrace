@@ -4,7 +4,7 @@
 
 ## Run
 
-Follow the main README setup, then run `python scripts/fetch_fieldwatch_data.py --split lab` using the virtual environment. Open **Evidence Lab** in the top bar. The eight synthetic exercises need no dataset download; the four real replays require approximately 6.8 MB. For headless checks, run `python scripts/check_fieldwatch_lab.py` (optional `--output artifacts/lab-checks.json`, refuses overwrite).
+Follow the main README setup, then run `python scripts/fetch_fieldwatch_data.py --split lab` using the virtual environment. Open **Evidence Lab** in the top bar. The nine synthetic exercises need no dataset download; the four real replays require approximately 6.8 MB. For headless checks, run `python scripts/check_fieldwatch_lab.py` (optional `--output artifacts/lab-checks.json`, refuses overwrite).
 
 ## Real contrast cases
 
@@ -31,6 +31,7 @@ Values are computed from current inference, not inserted as UI fixtures. Water p
 | Rice / paddy context | Ask for crop stage and intentional inundation context; do not infer crop loss |
 | Conflicting radar bands | Preserve unknowns and withhold whole-zone conclusions |
 | Four-pixel zone | Keep measurements inspectable but fail the resolution gate |
+| Just outside the image | Withhold a whole-zone conclusion even when less than 1% of the boundary area is outside; assessed-pixel quality is not boundary coverage |
 | Shifted grid | Reject before producing a change map, queue or export |
 | All-NoData scene | Reject rather than produce a safe-looking no-water result |
 
@@ -41,7 +42,7 @@ These artificial 96×96 scenes exercise the actual ingestion/classification/repo
 1. Start with Northeast India. Explain actual radar, optical context, dates, unknown pixels and illustrative—not farm—zones.
 2. Open the stronger India replay. Show the selection disclosure before discussing its numbers. Switch between radar, reference labels and errors.
 3. Show Sri Lanka next: contrast 99.6% precision with 1.0% recall and the violet missed-water map. Abstention is not free accuracy.
-4. Run tiny-zone and paddy-context exercises. Show the field-level review gate even when water-like pixels exist.
+4. Run tiny-zone, paddy-context and partial-zone exercises. Show the field-level review gate even when water-like pixels exist. In partial-zone, the detail panel explicitly says **Partial**; a high assessed fraction inside the image cannot fill the missing edge.
 5. Run shifted-grid after a successful report: the old map disappears, metrics clear, and export becomes unavailable.
 6. Return to a normal example. Export a review with dates, source hashes, policy and human notes. Export before changing cases; notes are session-only.
 

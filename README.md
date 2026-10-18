@@ -24,7 +24,7 @@ Without downloading, upload your own **trusted, north-up, calibrated VV/VH dB Ge
 ## What you can do
 
 - Start with India, then replay actual historical observations from Spain and the USA. Optical imagery is context only, not an inference input or cloud-screened truth.
-- Open **Evidence Lab** for four selected real contrast cases from India, Pakistan and Sri Lanka, plus eight executable synthetic hard cases. Inspect reference labels and false-alarm/missed-water maps without feeding labels to inference.
+- Open **Evidence Lab** for four selected real contrast cases from India, Pakistan and Sri Lanka, plus nine executable synthetic hard cases. Inspect reference labels and false-alarm/missed-water maps without feeding labels to inference.
 - Inspect field-level review gates: insufficient resolution/coverage, rice/paddy context, repeat observations, water candidates and low signal. These gates do not certify safe or damaged fields.
 - Inspect OpenCV-derived water evidence, uncertain pixels, and geographic review zones.
 - Draw zones on EPSG:4326 imagery, or import longitude/latitude GeoJSON for any supported raster CRS. Polygons are user-provided, not inferred farm boundaries.
@@ -37,6 +37,8 @@ Reviews exist only in the current page memory. Draft notes are captured when sel
 
 To resume: load the same radar inputs, dates, acquisition confirmation and zones, then choose **Restore notes** and select the exported JSON (up to 2 MiB). Restoration requires matching source/reference metadata, policy and zone details. Mismatched, duplicate or invalid notes are rejected without changing the current review. Only human annotations are restored—not measurements, classification, images or an authenticated identity. Custom polygons must be supplied again using the same GeoJSON.
 
+Version 0.5 adds explicit boundary-coverage metadata and `review-gates-v2`. Older review files will not automatically restore onto these changed reports; retain them and manually reconcile their notes. The original files are not modified or deleted.
+
 The default 3×3 sectors are demonstration survey areas, not farms or a cropland mask. Included examples are single observations; real temporal-pair validation remains outstanding.
 
 ### Choose the right export
@@ -48,18 +50,20 @@ The default 3×3 sectors are demonstration survey areas, not farms or a cropland
 
 GeoJSON coordinates are longitude/latitude even for projected source rasters. Full review boundaries are retained, but all area measurements describe **pixel-center overlap with the image**, which can be smaller than the boundary. Overlapping zones must not be summed as unique affected land. Without an earlier observation, change measurements remain `null`, not zero. Source digests/dates, method policies, uncertainty and synthetic/selected-replay disclosures travel with the file. Human annotations do not change any measurement or review gate.
 
+**Boundary coverage is not pixel quality.** The selected-zone panel labels boundaries as partial or within the image; uncertainty describes only the overlap. Reports and GeoJSON expose a separate `scene_clipped` flag and `scene_overlap_fraction` (a planar polygon-area ratio in the raster grid, not a geodesic hectare estimate or accuracy score). Any edge outside a tiny coordinate-roundoff tolerance withholds a whole-zone conclusion—even if less than 1% is missing or the rounded fraction reads `1`. Outside-image land is not counted as dry, wet, or assessed.
+
 GeoJSON export deliberately leaves the unexported-notes warning active; also save **Export review** if you need to restore notes. Original custom-zone files should be retained: exported rings are normalized to counterclockwise order and may not match the exact geometry ordering required by note restoration. Zone imports remain limited to 200 KB; a large annotated export can exceed that limit. GIS software may discard custom metadata, so keep the full review JSON alongside any geographic handoff. External GIS application compatibility and the new button's browser layout have not yet been verified.
 
 ## Regional hard-case showcase
 
-The scope is selected historical observations, not nationwide or worldwide monitoring. The Evidence Lab's eight synthetic exercises work without downloads. To enable its four real replays, download about 6.8 MB of radar, labels and metadata:
+The scope is selected historical observations, not nationwide or worldwide monitoring. The Evidence Lab's nine synthetic exercises work without downloads. To enable its four real replays, download about 6.8 MB of radar, labels and metadata:
 
 ```sh
 .venv/bin/python scripts/fetch_fieldwatch_data.py --split lab
 .venv/bin/python scripts/check_fieldwatch_lab.py
 ```
 
-Open **Evidence Lab** in the top bar. Test missing earlier pixels, repeated water, paddy context, four-pixel fields, conflicting radar, shifted grids and all-NoData inputs. A rejection produces no map, queue or export. Synthetic success demonstrates software contracts, not flood-detection accuracy. Read the [showcase guide and selection disclosure](docs/FIELDWATCH_SHOWCASE.md).
+Open **Evidence Lab** in the top bar. Test missing earlier pixels, repeated water, paddy context, four-pixel fields, a field just outside the image, conflicting radar, shifted grids and all-NoData inputs. A rejection produces no map, queue or export. Synthetic success demonstrates software contracts, not flood-detection accuracy. Read the [showcase guide and selection disclosure](docs/FIELDWATCH_SHOWCASE.md).
 
 ## Evidence, not a headline accuracy score
 
