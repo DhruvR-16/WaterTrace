@@ -12,7 +12,7 @@ import pytest
 from rasterio.io import MemoryFile
 from shapely.geometry import shape
 
-from fieldwatch.cli import main
+from fieldwatch.cli import main, save_report
 from fieldwatch.engine import default_zones, read_raster
 from fieldwatch.exports import geojson_export
 from fieldwatch.lab import run_case, synthetic_inputs
@@ -179,3 +179,75 @@ def test_geojson_cli_preserves_custom_polygons_and_pair_metadata(tmp_path):
     assert len(exported['features']) == 2
     assert exported['fieldwatch']['reference']['interval_days'] == 9
     assert all(f['properties']['new_water_candidate_ha'] == 0 for f in exported['features'])
+
+
+@pytest.mark.parametrize('operation', ['fsync', 'link'])
+def test_failed_save_never_publishes_partial_output_or_leaves_staging(tmp_path, monkeypatch, operation):
+    def fail(*args, **kwargs):
+        raise OSError('Simulated storage failure')
+    monkeypatch.setattr('fieldwatch.cli.os.'+operation, fail)
+    output = tmp_path/'report.json'
+    with pytest.raises(OSError):
+        save_report(output, '{"complete":true}')
+    assert not output.exists()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_failed_cli_save_returns_error_without_leaving_report(tmp_path, monkeypatch, capsys):
+    raw, _ = synthetic_inputs('new-water')
+    source = tmp_path/'radar.tif'; source.write_bytes(raw)
+    def fail(*args):
+        raise OSError('Sensitive system detail must not appear in stderr')
+    monkeypatch.setattr('fieldwatch.cli.os.fsync', fail)
+    output = tmp_path/'report.json'
+    assert main([str(source), '--date', '2020-01-10', '--output', str(output)]) == 2
+    assert not output.exists()
+    assert not list(tmp_path.glob('.fieldwatch-*'))
+    assert 'Sensitive system detail' not in capsys.readouterr().err
+
+
+@pytest.mark.skipif(os.name != 'posix', reason='POSIX symlink/private-permission contract')
+@pytest.mark.parametrize('target_exists', [True, False])
+def test_save_refuses_existing_and_dangling_symlinks(tmp_path, target_exists):
+    target = tmp_path/'original.json'
+    if target_exists:
+        target.write_text('original')
+    output = tmp_path/'report.json'; output.symlink_to(target)
+    with pytest.raises(FileExistsError):
+        save_report(output, 'replacement')
+    assert output.is_symlink()
+    assert target.read_text() == 'original' if target_exists else not target.exists()
+    assert not list(tmp_path.glob('.fieldwatch-*'))
+
+
+def test_complete_report_is_private_and_unicode_safe(tmp_path):
+    output = tmp_path/'report.json'; text = '{"note":"खेत 🌾"}\n'
+    save_report(output, text)
+    assert output.read_text(encoding='utf-8') == text
+    if os.name == 'posix':
+        assert output.stat().st_mode & 0o777 == 0o600
+    assert not list(tmp_path.glob('.fieldwatch-*'))
+
+
+def test_encoding_failure_removes_staging_without_publishing(tmp_path):
+    output = tmp_path/'report.json'
+    with pytest.raises(UnicodeEncodeError):
+        save_report(output, '\ud800')
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_competing_saves_publish_exactly_one_complete_report(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    output = tmp_path/'report.json'
+    payloads = ['first '*10000, 'second '*10000]
+    def attempt(payload):
+        try:
+            save_report(output, payload)
+            return payload
+        except FileExistsError:
+            return None
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = list(pool.map(attempt, payloads))
+    winners = [value for value in outcomes if value is not None]
+    assert len(winners) == 1 and output.read_text() == winners[0]
+    assert not list(tmp_path.glob('.fieldwatch-*'))

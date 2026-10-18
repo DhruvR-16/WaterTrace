@@ -1,5 +1,6 @@
 """Smoke-test the local HTTP service using self-authored georeferenced radar."""
 import time
+import json
 import httpx
 import numpy as np
 from rasterio.io import MemoryFile
@@ -30,8 +31,18 @@ def main():
         assert result['reference'] is None
         assert 'default-src' in response.headers['content-security-policy']
         assert client.post('/api/analyze',files={'current':('bad.tif',b'not a raster')}).status_code==422
+        zones={'type':'FeatureCollection','features':[{'type':'Feature',
+            'properties':{'id':'field','name':'खेत 🌾'},'geometry':result['zones'][0]['geometry']}]}
+        invalid_unicode=json.dumps(zones).replace(json.dumps('खेत 🌾'), '"\\ud800"')
+        duplicate=json.dumps(zones)[:-1]+',"type":"FeatureCollection"}'
+        for payload in (invalid_unicode, duplicate, '['*10000+'0'+']'*10000):
+            rejected=client.post('/api/analyze',files={'current':('synthetic.tif',raw)},data={'zones':payload})
+            assert rejected.status_code==422 and isinstance(rejected.json()['detail'],str)
+        recovered=client.post('/api/analyze',files={'current':('synthetic.tif',raw)},data={'zones':json.dumps(zones)})
+        recovered.raise_for_status()
+        assert recovered.json()['zones'][0]['name']=='खेत 🌾'
         assert client.get('/api/health',headers={'Host':'untrusted.example'}).status_code==400
-    print('FieldWatch HTTP smoke passed: real decoding, synthetic water, rejection and host bounds.')
+    print('FieldWatch HTTP smoke passed: raster decoding, malformed-input recovery, Unicode and host bounds.')
 
 
 if __name__=='__main__':main()

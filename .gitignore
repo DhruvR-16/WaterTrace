@@ -49,6 +49,7 @@ logs/
 *.db
 tmp/
 temp/
+.fieldwatch-*.tmp
 
 # Editor and operating-system files
 .DS_Store

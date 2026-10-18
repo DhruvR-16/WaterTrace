@@ -20,3 +20,4 @@
 **/credentials*.json
 **/client_secret*.json
 **/service-account*.json
+**/.fieldwatch-*.tmp

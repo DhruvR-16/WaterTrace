@@ -1,5 +1,4 @@
 """Local review workspace. Public hosting requires a separate access-control review."""
-import json
 import logging
 import os
 from pathlib import Path
@@ -20,6 +19,7 @@ from fieldwatch.engine import InvalidRaster, MAX_BYTES
 from fieldwatch.limits import RequestLimits
 from fieldwatch.service import run_analysis
 from fieldwatch.lab import cases, case_by_id, run_case
+from fieldwatch.zone_input import load_zones, MAX_ZONE_BYTES
 
 STATIC = Path(__file__).parent / "static"
 SLOTS = BoundedSemaphore(2)
@@ -109,15 +109,13 @@ def execute(raw, **kwargs):
 def parse_zones(text):
     if not text:
         return None
-    if len(text.encode('utf-8')) > 200_000:
-        raise HTTPException(413, "Zone GeoJSON exceeds 200 KB.")
     try:
-        value = json.loads(text)
-        if not isinstance(value, dict) or value.get('type') != 'FeatureCollection':
-            raise ValueError()
-        return value
-    except (TypeError, ValueError):
-        raise HTTPException(422, "Zones must be valid GeoJSON.") from None
+        raw = text.encode('utf-8') if isinstance(text, str) else text
+        if len(raw) > MAX_ZONE_BYTES:
+            raise HTTPException(413, "Zone GeoJSON exceeds 200 KB.")
+        return load_zones(raw)
+    except (InvalidRaster, UnicodeError):
+        raise HTTPException(422, "Zones must be UTF-8 GeoJSON with unique keys, finite values and nesting of at most 32 levels.") from None
 
 
 @app.post("/api/examples/{identifier}/analyze")
@@ -128,7 +126,7 @@ async def analyze_example(identifier: str, request: Request):
     if not radar_path(item).is_file():
         raise HTTPException(503, "Download the public demo first: python scripts/fetch_fieldwatch_data.py --split demo")
     raw_body = await request.body()
-    zones = parse_zones(raw_body.decode("utf-8", errors="replace")) if raw_body else None
+    zones = parse_zones(raw_body) if raw_body else None
     def example_result():
         try:
             raw = radar_path(item).read_bytes()

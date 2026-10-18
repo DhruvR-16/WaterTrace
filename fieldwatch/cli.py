@@ -4,10 +4,12 @@ import json
 import os
 from pathlib import Path
 import sys
+from tempfile import NamedTemporaryFile
 
 from fieldwatch.engine import InvalidRaster, MAX_BYTES
 from fieldwatch.exports import geojson_export
 from fieldwatch.service import export_report, run_analysis
+from fieldwatch.zone_input import load_zones, MAX_ZONE_BYTES
 
 
 def bounded_read(path, limit):
@@ -16,6 +18,18 @@ def bounded_read(path, limit):
     if len(content)>limit:
         raise InvalidRaster('Input exceeds the supported byte limit.')
     return content
+
+
+def save_report(path, payload):
+    """Publish complete bytes exclusively; clean up private staging on failure."""
+    # Same-directory staging keeps the hard link on one filesystem. Linking is
+    # atomic and refuses existing destinations, including dangling symlinks.
+    with NamedTemporaryFile(mode='w', encoding='utf-8', dir=path.parent,
+                            prefix='.fieldwatch-', suffix='.tmp') as staging:
+        staging.write(payload)
+        staging.flush()
+        os.fsync(staging.fileno())
+        os.link(staging.name, path)
 
 
 def main(argv=None):
@@ -30,16 +44,13 @@ def main(argv=None):
     parser.add_argument('--output',type=Path,required=True,help='New private JSON file; existing files are never replaced.')
     args=parser.parse_args(argv)
     try:
-        zones=json.loads(bounded_read(args.zones,200_000)) if args.zones else None
-        if args.zones and (not isinstance(zones, dict) or zones.get('type') != 'FeatureCollection'):
-            raise InvalidRaster('Zones must be a GeoJSON FeatureCollection.')
+        zones=load_zones(bounded_read(args.zones,MAX_ZONE_BYTES)) if args.zones else None
         result=run_analysis(bounded_read(args.current,MAX_BYTES),observed_on=args.date,
             reference_raw=bounded_read(args.reference,MAX_BYTES) if args.reference else None,
             reference_on=args.reference_date,same_orbit=args.same_orbit,zones=zones)
         exported=geojson_export(result) if args.format=='geojson' else export_report(result)
         payload=json.dumps(exported,indent=2,allow_nan=False)+'\n'
-        descriptor=os.open(args.output,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
-        with os.fdopen(descriptor,'w') as output:output.write(payload)
+        save_report(args.output, payload)
         print('Evidence report saved. This is not a flood-damage or safety assessment.')
         return 0
     except (InvalidRaster, ValueError) as exc:

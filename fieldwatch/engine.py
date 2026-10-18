@@ -206,7 +206,11 @@ def summarize_zones(raster, classes, collection=None, new_water=None, persistent
             ids.add(identifier)
             name = str(properties.get("name", identifier))[:100]
             crop = str(properties.get("crop", "unknown")).strip()[:80]
-        except (KeyError, TypeError, ValueError, IndexError):
+            for text in (identifier, name, crop):
+                text.encode('utf-8')
+            # Retain the validated geometry only, not arbitrary foreign payloads.
+            geometry = {'type': 'Polygon', 'coordinates': [[list(point) for point in rings[0]]]}
+        except (KeyError, TypeError, ValueError, IndexError, OverflowError, RecursionError):
             raise InvalidRaster("Each zone needs a unique ID and a valid, intersecting Polygon with 4–200 lon/lat points and no holes.") from None
         clipped = polygon.intersection(scene)
         scene_clipped = not scene_with_roundoff.covers(polygon)
