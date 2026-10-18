@@ -70,7 +70,7 @@ def test_rounded_fraction_cannot_clear_explicit_clipping_gate(raster):
     zone['reasons'] = []  # Gate must not depend on English message matching.
     decision = review_decision(zone, False)
     assert decision['level'] == 'insufficient_evidence'
-    assert decision['policy'] == 'review-gates-v2'
+    assert decision['policy'] == 'review-gates-v3'
 
 
 def test_mostly_outside_boundary_is_not_confused_with_assessed_pixel_fraction(raster):

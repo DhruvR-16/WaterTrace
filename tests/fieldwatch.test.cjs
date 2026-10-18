@@ -47,6 +47,82 @@ function reviewFixture(){
     images:{radar:'pixels'},generated_at:'2020-01-11T00:00:00Z'};
 }
 const savedReview={outcome:'follow_up',note:'Check local irrigation context.',recorded_at:'2020-01-11T00:00:00Z'};
+function temporalFixture(){
+  return {policy:'paired-evidence-v1',paired_assessed_ha:.75,paired_uncertain_ha:.25,
+    paired_assessed_fraction:.75,water_without_baseline_ha:.25,
+    observed_water_baseline_fraction:.5,observed_water_baseline_complete:false};
+}
+test('temporal export preserves false and zero and separates unavailable old metadata',()=>{
+  const report=reviewFixture(),support=temporalFixture();support.water_without_baseline_ha=0;
+  report.temporal_support=support;report.zones[0].temporal_support=support;
+  const exported=model.geojsonExport(report,{a:savedReview}),props=exported.features[0].properties;
+  assert.equal(props.observed_water_baseline_complete,false);
+  assert.equal(props.water_without_baseline_ha,0);
+  assert.equal(props.temporal_policy,'paired-evidence-v1');
+  assert.deepEqual(exported.fieldwatch.temporal_support,support);
+  exported.fieldwatch.temporal_support.paired_assessed_fraction=0;
+  assert.equal(support.paired_assessed_fraction,.75);
+  const old=model.geojsonExport(reviewFixture());
+  assert.equal(old.features[0].properties.observed_water_baseline_complete,null);
+  assert.equal(old.features[0].properties.water_without_baseline_ha,null);
+  assert.equal(old.fieldwatch.temporal_support,null);
+});
+test('note restoration requires matching temporal support and rejects older context',()=>{
+  const report=reviewFixture();report.zones[0].temporal_support=temporalFixture();
+  const exported=JSON.parse(JSON.stringify(model.reviewExport(report,{a:savedReview})));
+  assert.equal(model.restoreReviews(report,exported).a.note,savedReview.note);
+  exported.zones[0].temporal_support.observed_water_baseline_complete=true;
+  assert.throws(()=>model.restoreReviews(report,exported),/does not match/);
+  delete exported.zones[0].temporal_support;
+  assert.throws(()=>model.restoreReviews(report,exported),/does not match/);
+});
+test('paired detail labels missing baseline separately from current uncertainty',async()=>{
+  const ui=await reviewUI();ui.context.fixture.zones[0].temporal_support=temporalFixture();
+  ui.run('renderDetail()');
+  const stats=ui.get('zone-stats').children;
+  assert.equal(stats[2].children[0].textContent,'0%');
+  assert.equal(stats[3].children[1],'Water without earlier baseline');
+  assert.equal(stats[4].children[1],'Assessable at both dates');
+  assert.equal(stats[4].children[0].textContent,'75%');
+  assert.equal(ui.get('detail-temporal').hidden,false);
+  assert.match(ui.get('detail-temporal').textContent,/does not mean no new flooding/);
+});
+test('rounded-zero missing baseline still displays a positive bound and warning',async()=>{
+  const ui=await reviewUI(),support=temporalFixture();
+  support.water_without_baseline_ha=0;support.paired_assessed_fraction=1;support.observed_water_baseline_fraction=1;
+  ui.context.fixture.zones[0].temporal_support=support;
+  ui.run('renderDetail()');
+  assert.equal(ui.get('zone-stats').children[3].children[0].textContent,'<0.001 ha');
+  assert.match(ui.get('detail-temporal').textContent,/Earlier evidence is missing/);
+});
+test('changing to an unpaired zone clears old temporal detail and metrics',async()=>{
+  const ui=await reviewUI();ui.context.fixture.zones[0].temporal_support=temporalFixture();
+  ui.run('renderDetail();selectZone("b")');
+  assert.equal(ui.get('detail-temporal').hidden,true);
+  assert.equal(ui.get('detail-temporal').textContent,'');
+  assert.equal(ui.get('zone-stats').children.length,3);
+});
+test('complete baseline and no-current-water context do not claim flood onset',async()=>{
+  const ui=await reviewUI(),support=temporalFixture();
+  for(const complete of [true,null]){
+    support.observed_water_baseline_complete=complete;support.water_without_baseline_ha=0;
+    ui.context.fixture.zones[0].temporal_support=support;ui.run('renderDetail()');
+    assert.match(ui.get('detail-temporal').textContent,/do not establish flood onset/);
+    assert.doesNotMatch(ui.get('detail-temporal').textContent,/Earlier evidence is missing/);
+  }
+});
+test('timeline carries scene-level paired support and baseline warning',async()=>{
+  const ui=await reviewUI();ui.context.fixture.temporal_support=temporalFixture();
+  ui.run('renderTimeline()');
+  const row=ui.get('timeline').children[1];
+  assert.equal(row.children[0].textContent,'PAIRED SUPPORT');
+  assert.match(row.children[1].textContent,/75% of scene/);
+  assert.match(row.children[2],/does not rule out new flooding/);
+});
+test('temporal detail target exists in shipped HTML',()=>{
+  const html=require('node:fs').readFileSync(require.resolve('../fieldwatch/static/index.html'),'utf8');
+  assert.match(html,/<p id="detail-temporal" hidden><\/p>/);
+});
 test('draft tracking distinguishes untouched and edited notes',()=>{
   assert.equal(model.reviewChanged(undefined,'unreviewed',''),false);
   assert.equal(model.reviewChanged(undefined,'unreviewed','draft'),true);

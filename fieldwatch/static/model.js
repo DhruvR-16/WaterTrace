@@ -22,10 +22,13 @@
   }
   function geojsonExport(report, reviews={}) {
     const features=report.zones.map(zone=>{
-      const decision=zone.decision||{},support=zone.spatial_support||{},review=Object.hasOwn(reviews,zone.id)?reviews[zone.id]:{};
+      const decision=zone.decision||{},support=zone.spatial_support||{},temporal=zone.temporal_support||{},review=Object.hasOwn(reviews,zone.id)?reviews[zone.id]:{};
       const properties=Object.fromEntries(['id','name','crop','water_observed_ha','uncertain_ha',
         'no_water_detected_ha','water_fraction','pixels','new_water_candidate_ha','repeat_water_observed_ha'].map(k=>[k,zone[k]??null]));
       Object.assign(properties,{
+        ...Object.fromEntries(['paired_assessed_ha','paired_uncertain_ha','paired_assessed_fraction',
+          'water_without_baseline_ha','observed_water_baseline_fraction','observed_water_baseline_complete'].map(k=>[k,temporal[k]??null])),
+        temporal_policy:temporal.policy??null,
         review_queue:zone.status??null,scene_overlap_ha:zone.area_ha??null,assessed_fraction:zone.coverage??null,
         scene_clipped:support.scene_clipped??null,scene_overlap_fraction:support.scene_overlap_fraction??null,
         scene_overlap_fraction_basis:support.fraction_basis??null,boundary_tolerance_pixels:support.boundary_tolerance_pixels??null,
@@ -45,7 +48,7 @@
       const geometry={type:'Polygon',coordinates:[signedArea<0?[...ring].reverse():ring]};
       return {type:'Feature',id:zone.id,geometry,properties};
     });
-    const metadata=Object.fromEntries(['source','reference','engine','policy','reference_policy','zone_basis','limitations','lab','context'].map(k=>[k,report[k]??null]));
+    const metadata=Object.fromEntries(['source','reference','engine','policy','reference_policy','zone_basis','limitations','lab','context','temporal_support'].map(k=>[k,report[k]??null]));
     Object.assign(metadata,{schema_version:'geojson-review-v1',geometry_role:'review_zone_boundaries_not_water_segmentation',
       area_scope:'scene_overlap_pixel_centers',
       review_notice:'Human annotations are unverified, not algorithmic findings. Locations and notes may be sensitive. Use the full review JSON to restore notes.'});

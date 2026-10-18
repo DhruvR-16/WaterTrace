@@ -163,7 +163,33 @@ def default_zones(raster):
     return {"type": "FeatureCollection", "features": features}
 
 
-def summarize_zones(raster, classes, collection=None, new_water=None, persistent=None):
+def temporal_summary(classes, before, area, mask=None):
+    """Area-weighted paired support, not flood onset or continuous duration.
+
+    An unknown earlier pixel is neither earlier land nor earlier water. Keep
+    completeness as an unrounded boolean so small gaps cannot clear a gate.
+    """
+    if before is None:
+        return None
+    if mask is not None:
+        classes, before, area = classes[mask], before[mask], area[mask]
+    paired = (classes != 0) & (before != 0)
+    water = classes == 2
+    missing = water & (before == 0)
+    total = float(area.sum())
+    water_area = float(area[water].sum())
+    return {
+        'policy': 'paired-evidence-v1',
+        'paired_assessed_ha': round(float(area[paired].sum()), 3),
+        'paired_uncertain_ha': round(float(area[~paired].sum()), 3),
+        'paired_assessed_fraction': round(float(area[paired].sum()) / total, 4),
+        'water_without_baseline_ha': round(float(area[missing].sum()), 3),
+        'observed_water_baseline_fraction': round(float(area[water & (before != 0)].sum()) / water_area, 4) if water_area else None,
+        'observed_water_baseline_complete': not bool(missing.any()) if water_area else None,
+    }
+
+
+def summarize_zones(raster, classes, collection=None, new_water=None, persistent=None, before=None):
     collection = default_zones(raster) if collection is None else collection
     if not isinstance(collection, dict) or collection.get("type") != "FeatureCollection":
         raise InvalidRaster("Zones must be a GeoJSON FeatureCollection in longitude/latitude.")
@@ -248,6 +274,7 @@ def summarize_zones(raster, classes, collection=None, new_water=None, persistent
                "area_ha": round(total, 3), **{k: round(v, 3) for k,v in values.items()},
                "coverage": round(coverage,4), "water_fraction": round(water_fraction,4), "pixels": int(mask.sum()),
                "spatial_support": spatial_support,
+               "temporal_support": temporal_summary(classes, before, area, mask),
                "new_water_candidate_ha": round(float(area[mask & new_water].sum()),3) if new_water is not None else None,
                "repeat_water_observed_ha": round(float(area[mask & persistent].sum()),3) if persistent is not None else None,
                "pixel_geometry": mapping(clipped), "geometry": geometry}

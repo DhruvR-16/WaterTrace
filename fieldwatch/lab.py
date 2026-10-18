@@ -27,7 +27,7 @@ CASES = [
      'lesson':'Unknown labeled water is counted as missed water. This severe recall failure is intentionally visible, not removed from evaluation.'},
     {'id':'new-water','title':'New-water candidate','kind':'synthetic', 'question':'Does a matched earlier/current pair expose a new-water candidate?', 'lesson':'Detect a change candidate, while withholding crop-damage and duration claims.'},
     {'id':'repeat-water','title':'Water at both dates','kind':'synthetic', 'question':'Can repeated water be mistaken for newly flooded land?', 'lesson':'No new-water candidate should appear. Two wet observations do not prove permanent water or continuous flooding.'},
-    {'id':'missing-earlier','title':'Missing earlier pixels','kind':'synthetic', 'question':'Does an unobserved earlier area incorrectly become new flood water?', 'lesson':'Earlier unknown pixels cannot establish a change from dry land.'},
+    {'id':'missing-earlier','title':'Missing earlier pixels','kind':'synthetic', 'question':'Does zero new-water area really mean no new flooding?', 'lesson':'Earlier unknown pixels cannot establish a change from dry land. Show current water without a baseline and request usable earlier evidence.'},
     {'id':'paddy-context','title':'Rice / paddy context','kind':'synthetic', 'question':'Does water automatically mean damaged rice?', 'lesson':'Request crop-stage and irrigation context; do not turn a water signal into a crop-loss finding.'},
     {'id':'polarization-conflict','title':'Conflicting radar bands','kind':'synthetic', 'question':'What if VV looks dry but VH looks wet?', 'lesson':'Disagreement remains unknown, and whole-zone interpretation is withheld.'},
     {'id':'tiny-zone','title':'Sub-resolution field','kind':'synthetic', 'question':'Should a four-pixel polygon receive a field-level conclusion?', 'lesson':'Keep pixel measurements inspectable, but explicitly fail the resolution gate.'},
@@ -136,7 +136,7 @@ def run_case(identifier):
         zones=result['zones']
         checks={'new-water':('Detect new-water candidate',lambda:sum(z['new_water_candidate_ha'] for z in zones)>0),
             'repeat-water':('Do not call repeated water new',lambda:sum(z['new_water_candidate_ha'] for z in zones)==0 and sum(z['repeat_water_observed_ha'] for z in zones)>0),
-            'missing-earlier':('Unknown earlier pixels do not count as previously dry',lambda:sum(z['new_water_candidate_ha'] for z in zones)==0),
+            'missing-earlier':('Keep unbaselined water visible and require earlier evidence',lambda:sum(z['new_water_candidate_ha'] for z in zones)==0 and result['temporal_support']['water_without_baseline_ha']>0 and any(z['id']=='sector-5' and z['decision']['level']=='baseline_required' for z in zones)),
             'paddy-context':('Require rice context',lambda:any(z['decision']['level']=='context_required' for z in zones)),
             'polarization-conflict':('Withhold whole-zone conclusions',lambda:all(z['decision']['level']=='insufficient_evidence' for z in zones)),
             'tiny-zone':('Withhold a sub-resolution conclusion',lambda:all(z['pixels']<25 and z['decision']['level']=='insufficient_evidence' for z in zones)),

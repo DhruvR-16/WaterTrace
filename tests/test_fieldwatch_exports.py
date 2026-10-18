@@ -32,6 +32,7 @@ def test_export_preserves_measurements_and_gates_without_images(identifier):
     assert exported['fieldwatch']['lab'] == report['lab']
     assert exported['fieldwatch']['source'] == report['source']
     assert exported['fieldwatch']['policy'] == report['policy']
+    assert exported['fieldwatch']['temporal_support'] == report['temporal_support']
     assert len(exported['features']) == len(report['zones'])
     for feature, zone in zip(exported['features'], report['zones']):
         props = feature['properties']
@@ -48,6 +49,12 @@ def test_export_preserves_measurements_and_gates_without_images(identifier):
         assert props['scene_clipped'] == zone['spatial_support']['scene_clipped']
         assert props['scene_overlap_fraction'] == zone['spatial_support']['scene_overlap_fraction']
         assert props['scene_overlap_fraction_basis'] == zone['spatial_support']['fraction_basis']
+        temporal = zone['temporal_support'] or {}
+        assert props['temporal_policy'] == temporal.get('policy')
+        for key in ('paired_assessed_ha', 'paired_uncertain_ha', 'paired_assessed_fraction',
+                    'water_without_baseline_ha', 'observed_water_baseline_fraction',
+                    'observed_water_baseline_complete'):
+            assert props[key] == temporal.get(key)
         assert props['human_outcome'] is None
         assert props['human_review_unverified'] is True
     assert 'data:image/' not in json.dumps(exported)

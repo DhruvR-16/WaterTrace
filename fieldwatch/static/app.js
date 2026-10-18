@@ -167,6 +167,12 @@ function renderDetail(){
   const stats=[[M.areaLabel(z.area_ha)+' ha','Scene overlap'],[M.areaLabel(z.water_observed_ha)+' ha','Water-like evidence'],[percent(1-z.coverage),'Uncertain within overlap']];
   if(z.spatial_support)stats.push([z.spatial_support.scene_clipped?'Partial':'Within image','Boundary coverage (not pixel quality)']);
   if(z.new_water_candidate_ha!==null)stats.push([M.areaLabel(z.new_water_candidate_ha)+' ha','New water candidate'],[M.areaLabel(z.repeat_water_observed_ha)+' ha','Water at both observations']);
+  const temporal=z.temporal_support;
+  if(temporal)stats.push([temporal.observed_water_baseline_complete===false&&temporal.water_without_baseline_ha===0?'<0.001 ha':M.areaLabel(temporal.water_without_baseline_ha)+' ha','Water without earlier baseline'],[percent(temporal.paired_assessed_fraction),'Assessable at both dates']);
+  $('detail-temporal').hidden=!temporal;
+  $('detail-temporal').textContent=temporal ? (temporal.observed_water_baseline_complete===false
+    ? 'Earlier evidence is missing for some current water. Zero new-water candidates does not mean no new flooding. Rounded areas or percentages may hide small gaps.'
+    : 'Paired support measures pixels assessable at both dates, not just current-image coverage. Two observations do not establish flood onset or continuous conditions.') : '';
   $('zone-stats').replaceChildren(...stats.map(([value,label])=>{const item=element('span');item.append(element('strong',value),document.createTextNode(label));return item;}));
   const review=state.reviews[z.id];$('review-outcome').value=review?.outcome||'unreviewed';$('review-note').value=review?.note||'';
 }
@@ -174,6 +180,7 @@ function renderTimeline(){
   const r=state.report,items=[];
   if(r.reference)items.push([r.reference.observed_on,'Earlier radar observation',`Compared across a ${r.reference.interval_days}-day interval. Continuous conditions between dates are unknown.`]);
   else items.push(['NO EARLIER SCENE','Flood onset not established','A single observation cannot distinguish new flooding from permanent or intentionally present water.']);
+  if(r.temporal_support)items.push(['PAIRED SUPPORT',`${percent(r.temporal_support.paired_assessed_fraction)} of scene assessable at both dates`,r.temporal_support.observed_water_baseline_complete===false?'Some current water has no usable earlier baseline. Zero new-water candidates does not rule out new flooding.':'Assessable at both dates is distinct from current-image coverage; unknown pixels at either date are excluded.']);
   items.push([r.source.observed_on||'DATE NOT SUPPLIED','Current radar observation',`Source digest ${r.source.sha256.slice(0,16)}… · ${r.source.width} × ${r.source.height} pixels`]);
   items.push(['HUMAN FOLLOW-UP','Confirm the local context','No field visit, alert or intervention is scheduled automatically.']);
   $('timeline').replaceChildren(...items.map(([date,title,note])=>{const item=element('div',undefined,'timeline-item');item.append(element('small',date),element('strong',title),document.createTextNode(note));return item;}));

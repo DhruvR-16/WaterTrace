@@ -9,6 +9,7 @@ WITHHELD = ["crop damage", "water depth", "continuous flood duration", "field ac
 
 def review_decision(zone, paired):
     reasons = []
+    missing_baseline = paired and (zone.get('temporal_support') or {}).get('observed_water_baseline_complete') is False
     if zone['pixels'] < 25:
         reasons.append('This zone has fewer than 25 pixels; do not interpret a field-level area estimate.')
     # Engine reasons use unrounded coverage; display rounding must not clear a gate.
@@ -21,6 +22,8 @@ def review_decision(zone, paired):
     elif zone['crop'].strip().lower() in ('rice', 'paddy'):
         level, next_step = 'context_required', 'Confirm crop stage and intentional inundation with a local reviewer.'
         reasons.append('A water signal in a paddy is not by itself an abnormal flood.')
+    elif missing_baseline:
+        level, next_step = 'baseline_required', 'Obtain a usable matched earlier observation or independent historical evidence before interpreting water change.'
     elif paired and zone['repeat_water_observed_ha'] > 0 and zone['new_water_candidate_ha'] == 0:
         level, next_step = 'repeat_observation', 'Check a longer-term water baseline; two observations do not establish permanent water.'
         reasons.append('Water was seen at both endpoints without a detected new-water candidate in this zone.')
@@ -30,5 +33,7 @@ def review_decision(zone, paired):
         level, next_step = 'low_signal', 'Retain the observation; investigate reported impacts even if this screen shows little water.'
     if not paired:
         reasons.append('Without an earlier matched observation, flood onset is not established.')
+    if missing_baseline:
+        reasons.append('Some currently observed water has an unknown earlier state. Zero new-water candidates would not establish no new flooding; partial new/repeated measurements remain visible.')
     return {'level':level, 'next_step':next_step, 'reasons':reasons,
-            'withheld_claims':list(WITHHELD), 'policy':'review-gates-v2'}
+            'withheld_claims':list(WITHHELD), 'policy':'review-gates-v3'}

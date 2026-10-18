@@ -19,12 +19,18 @@ def geojson_export(report, reviews=None):
     for zone in report['zones']:
         decision = zone.get('decision') or {}
         support = zone.get('spatial_support') or {}
+        temporal = zone.get('temporal_support') or {}
         review = reviews.get(zone['id']) or {}
         properties = {key: zone.get(key) for key in (
             'id', 'name', 'crop', 'water_observed_ha', 'uncertain_ha',
             'no_water_detected_ha', 'water_fraction', 'pixels',
             'new_water_candidate_ha', 'repeat_water_observed_ha')}
         properties.update({
+            **{key: temporal.get(key) for key in (
+                'paired_assessed_ha', 'paired_uncertain_ha', 'paired_assessed_fraction',
+                'water_without_baseline_ha', 'observed_water_baseline_fraction',
+                'observed_water_baseline_complete')},
+            'temporal_policy': temporal.get('policy'),
             'review_queue': zone.get('status'),
             'scene_overlap_ha': zone.get('area_ha'),
             'assessed_fraction': zone.get('coverage'),
@@ -56,7 +62,7 @@ def geojson_export(report, reviews=None):
                          'geometry': geographic_geometry(zone['geometry']), 'properties': properties})
     metadata = {key: report.get(key) for key in (
         'source', 'reference', 'engine', 'policy', 'reference_policy',
-        'zone_basis', 'limitations', 'lab', 'context')}
+        'zone_basis', 'limitations', 'lab', 'context', 'temporal_support')}
     metadata.update({
         'schema_version': 'geojson-review-v1',
         'geometry_role': 'review_zone_boundaries_not_water_segmentation',

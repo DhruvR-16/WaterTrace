@@ -6,7 +6,7 @@ import time
 import cv2
 import numpy as np
 
-from fieldwatch.engine import POLICY, InvalidRaster, classify, compare, geographic_bounds, pixel_areas, read_raster, summarize_zones
+from fieldwatch.engine import POLICY, InvalidRaster, classify, compare, geographic_bounds, pixel_areas, read_raster, summarize_zones, temporal_summary
 from fieldwatch.decisions import review_decision
 
 
@@ -61,7 +61,11 @@ def run_analysis(raw, *, name="Radar scene", observed_on=None, reference_raw=Non
     unknown_fraction = float(area[classes == 0].sum()) / total
     steps.append({"action": "request_human_review" if unknown_fraction > .3 else "summarize_observed_evidence",
                   "outcome": f"{unknown_fraction:.1%} of the scene is uncertain/unobserved. Unknown pixels are not classified as safe."})
-    rows = summarize_zones(raster, classes, zones, new_water, persistent)
+    temporal_support = temporal_summary(classes, before, area)
+    if temporal_support:
+        steps.append({'action': 'account_for_paired_support', 'outcome':
+                      f"{temporal_support['paired_assessed_fraction']:.1%} of scene area is assessable at both dates. Water with an unknown earlier state is reported separately, never counted as new or repeated water."})
+    rows = summarize_zones(raster, classes, zones, new_water, persistent, before)
     for row in rows:
         row['decision'] = review_decision(row, reference is not None)
     steps.append({'action':'check_field_review_gates', 'outcome':f"{sum(r['decision']['level'] == 'insufficient_evidence' for r in rows)} zones lack sufficient coverage or resolution for a whole-field interpretation. Pixel measurements remain visible; field-level conclusions are withheld."})
@@ -80,11 +84,12 @@ def run_analysis(raw, *, name="Radar scene", observed_on=None, reference_raw=Non
               "reference": {"sha256": reference.sha256, "observed_on": reference_on, "interval_days": (current_date-reference_date).days,
                             "matching_acquisition_user_confirmed": True} if reference else None,
               "zone_basis": "user-provided polygons; crop/ownership not verified" if zones is not None else "illustrative 3×3 survey grid; not farm boundaries or a cropland mask",
-              "summary": summary, "zones": rows, "policy": policy, "reference_policy": previous_policy, "trace": steps,
+              "summary": summary, "temporal_support": temporal_support, "zones": rows, "policy": policy, "reference_policy": previous_policy, "trace": steps,
               "limitations": ["Water-like radar evidence is not proof of flood damage, water depth, soil waterlogging, crop loss or field safety.",
                   "No crop mask, terrain shadow mask or vegetation exclusion layer is applied in this version; errors can occur outside uncertain pixels too.",
                   "Permanent water, intentional irrigation and paddy fields may produce water signals. Confirm context before acting.",
                   "Do not infer uninterrupted flooding between acquisition dates; no real-time monitoring is running.",
+                  "Zero new-water candidates do not rule out new flooding: current water with an unknown earlier state has no usable baseline. Paired support is distinct from current-image coverage.",
                   "Area uses pixel centers and row-wise geodesic pixel-area estimates; small/boundary-crossing fields require review."],
               "images": {"radar": radar_preview(raster), "evidence": overlay(classes),
                          "earlier": radar_preview(reference) if reference else None,
