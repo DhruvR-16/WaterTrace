@@ -30,6 +30,7 @@ Without downloading, upload your own **trusted, north-up, calibrated VV/VH dB Ge
 - Draw zones on EPSG:4326 imagery, or import longitude/latitude GeoJSON for any supported raster CRS. Polygons are user-provided, not inferred farm boundaries.
 - Compare an earlier/current pair on the exact same CRS, grid, and dimensions after confirming matching orbit, direction, polarization, and calibration. Report new-water candidates separately from water seen at both dates. **Two dates never imply continuous duration.**
 - Filter water/uncertainty queues, select zones on the image or list, add human review notes, and export a JSON evidence report with source digests, geometry, policy, dates, and trace.
+- Export all review boundaries as GeoJSON for a geographic handoff, retaining measured water/unknown areas, review gates, provenance and separate unverified notes. These polygons are **review zones, not detected water outlines**.
 - Run the same pipeline through a local CLI. Original imagery is excluded from CLI/report exports; coordinates and notes may still be sensitive.
 
 Reviews exist only in the current page memory. Draft notes are captured when selecting another zone or exporting. Switching observations or reanalyzing zones warns before clearing unexported notes; cancel to export first. Refresh/close warnings are browser-dependent, so **always verify your downloaded export before leaving**. No notes are automatically written to browser storage or sent to the server.
@@ -37,6 +38,17 @@ Reviews exist only in the current page memory. Draft notes are captured when sel
 To resume: load the same radar inputs, dates, acquisition confirmation and zones, then choose **Restore notes** and select the exported JSON (up to 2 MiB). Restoration requires matching source/reference metadata, policy and zone details. Mismatched, duplicate or invalid notes are rejected without changing the current review. Only human annotations are restored—not measurements, classification, images or an authenticated identity. Custom polygons must be supplied again using the same GeoJSON.
 
 The default 3×3 sectors are demonstration survey areas, not farms or a cropland mask. Included examples are single observations; real temporal-pair validation remains outstanding.
+
+### Choose the right export
+
+| Control | Purpose | What it does not do |
+|---|---|---|
+| **Export review** | Image-free evidence JSON and human notes; use **Restore notes** with matching original inputs | Does not authenticate human reports or save the original imagery |
+| **Zones GeoJSON** | All geographic review zones, regardless of queue filter, with measurements and current draft notes | Not a water mask, crop-loss assessment, or restorable notes backup |
+
+GeoJSON coordinates are longitude/latitude even for projected source rasters. Full review boundaries are retained, but all area measurements describe **pixel-center overlap with the image**, which can be smaller than the boundary. Overlapping zones must not be summed as unique affected land. Without an earlier observation, change measurements remain `null`, not zero. Source digests/dates, method policies, uncertainty and synthetic/selected-replay disclosures travel with the file. Human annotations do not change any measurement or review gate.
+
+GeoJSON export deliberately leaves the unexported-notes warning active; also save **Export review** if you need to restore notes. Original custom-zone files should be retained: exported rings are normalized to counterclockwise order and may not match the exact geometry ordering required by note restoration. Zone imports remain limited to 200 KB; a large annotated export can exceed that limit. GIS software may discard custom metadata, so keep the full review JSON alongside any geographic handoff. External GIS application compatibility and the new button's browser layout have not yet been verified.
 
 ## Regional hard-case showcase
 
@@ -84,6 +96,8 @@ mkdir -p artifacts
 
 Use `--reference earlier.tif --reference-date YYYY-MM-DD --same-orbit` for a verified matching pair, and `--zones zones.geojson` for your own review polygons. Output is created with mode `0600` on POSIX. Exit codes: `0` saved, `2` invalid/unreadable input or output error, `3` output already exists. A saved report is not a safety clearance.
 
+To create a geographic handoff instead, add `--format geojson` and choose a new output path such as `--output artifacts/india-zones.geojson`. The default remains `--format json`. CLI exports contain no browser-session notes; use the browser export to include those annotations. Both formats omit raster/preview payloads, but coordinates and notes can still disclose sensitive information.
+
 ## Architecture and boundaries
 
 ```text
@@ -93,7 +107,7 @@ Trusted radar GeoTIFF(s) + dates + optional GeoJSON
   → connected components + explicit unknown pixels
   → optional exact-grid earlier/current comparison
   → geodesic areas + separate human-review queues
-  → browser overlays, reviewer notes, provenance JSON
+  → browser overlays, reviewer notes, provenance JSON / geographic zone handoff
 
 Independent label rasters → evaluator / explicit Evidence Lab scoring AFTER inference
                            (never classification or review-queue inputs)

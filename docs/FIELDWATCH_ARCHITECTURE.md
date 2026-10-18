@@ -14,7 +14,8 @@ Help a cooperative or NGO reviewer separate (1) areas with water-like evidence, 
 | `fieldwatch/lab.py` | Allowlisted selected replays, post-inference reference scoring, synthetic contract exercises |
 | `fieldwatch/main.py` / `limits.py` | Local API, multipart validation, admission and body limits, privacy-safe errors |
 | `fieldwatch/catalog.py` | Three allowlisted historical examples and optical previews |
-| `fieldwatch/static/` | Buildless UI, map/zone selection, drawing/import, in-memory human review and JSON export |
+| `fieldwatch/exports.py` | Image-free GeoJSON review-zone handoff; parity-tested against the browser serializer |
+| `fieldwatch/static/` | Buildless UI, map/zone selection, drawing/import, in-memory human review and JSON/GeoJSON export |
 | `fieldwatch/cli.py` | Same analysis without a browser; private no-overwrite output |
 | `scripts/evaluate_fieldwatch.py` | Separate independent-label scoring; never imported by inference |
 
@@ -47,6 +48,8 @@ The additive `review-gates-v1` decision distinguishes a pixel measurement from a
 - `GET /api/lab`: fixed cases and local availability. `POST /api/lab/{id}/run`: fixed inputs only, no body or client-supplied paths. Uses the same two-slot admission limit as analysis. Missing real data returns actionable 503; unknown IDs return 404.
 - Lab reports add `lab` metadata and optional reference/error images after inference. Synthetic expected rejections return `kind: rejection_check` without images or summaries; the browser clears old results and disables export. Standard report export strips all preview images, retaining selection disclosures and reference provenance.
 - JSON schema version `1.0`: source/reference, summary, zones, policy, trace, limitations and PNG previews. Exports omit previews. Human reviews are added only by the client and never overwrite algorithmic findings.
+- Geographic handoff schema `geojson-review-v1`: a FeatureCollection of all review boundaries in longitude/latitude, not clipped pixel coordinates or water segmentation. Exterior winding is normalized counterclockwise per [GeoJSON polygon rules](https://www.rfc-editor.org/rfc/rfc7946.html#section-3.1.6); coordinates and boundary extent are otherwise unchanged. Feature properties include scene-overlap measurements, unknown area, review gate/reasons, withheld claims, source/reference digests and dates, and separate unverified human annotations. `fieldwatch` is a foreign metadata member retaining source CRS (not a GeoJSON CRS override), policies and lab/context disclosures. Consumers may ignore foreign members and array-valued properties; preserve the full review JSON too.
+- `--format geojson` exposes the same handoff through the CLI, retaining private no-overwrite file creation. The default is the existing JSON report. Browser GeoJSON export captures the active draft and ignores queue filters, but does not clear the unexported-review flag: only the full JSON is accepted by **Restore notes**. GeoJSON may exceed the 200 KB polygon-import limit, and winding normalization can prevent an exact restoration-context match; keep original custom-zone inputs.
 
 ## Deliberate trade-offs
 
