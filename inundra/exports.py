@@ -64,9 +64,9 @@ def geojson_export(report, reviews=None):
         'source', 'reference', 'engine', 'policy', 'reference_policy',
         'zone_basis', 'limitations', 'lab', 'context', 'temporal_support')}
     metadata.update({
-        'schema_version': 'geojson-review-v1',
+        'schema_version': 'geojson-review-v2',
         'geometry_role': 'review_zone_boundaries_not_water_segmentation',
         'area_scope': 'scene_overlap_pixel_centers',
         'review_notice': 'Human annotations are unverified, not algorithmic findings. Locations and notes may be sensitive. Use the full review JSON to restore notes.',
     })
-    return deepcopy({'type': 'FeatureCollection', 'fieldwatch': metadata, 'features': features})
+    return deepcopy({'type': 'FeatureCollection', 'inundra': metadata, 'features': features})

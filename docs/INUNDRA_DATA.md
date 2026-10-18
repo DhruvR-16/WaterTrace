@@ -22,11 +22,11 @@ Dates and orbit context come from the upstream event metadata. The default zones
 
 The benchmark reads all 90 pairs from `splits/flood_handlabeled/flood_test_data.csv`. Labels are used only for scoring. The classifier does not take a filename, country, label or expected outcome as input.
 
-The Evidence Lab deliberately selects four cases from that already exposed test split: `India_80221` (highest India chip IoU, a stronger contrast), `India_44475` (false positives with no labeled water), `Pakistan_167553` (weak overlap) and `Sri-Lanka_534068` (severe missed water). This post-hoc selection is not representative validation. See [case dates, scores and limitations](FIELDWATCH_SHOWCASE.md). Real lab exports carry radar and reference-label SHA-256 digests plus attribution. Synthetic exercises are generated from code, not real satellite observations or geographically validated farms.
+The Evidence Lab deliberately selects four cases from that already exposed test split: `India_80221` (highest India chip IoU, a stronger contrast), `India_44475` (false positives with no labeled water), `Pakistan_167553` (weak overlap) and `Sri-Lanka_534068` (severe missed water). This post-hoc selection is not representative validation. See [case dates, scores and limitations](INUNDRA_SHOWCASE.md). Real lab exports carry radar and reference-label SHA-256 digests plus attribution. Synthetic exercises are generated from code, not real satellite observations or geographically validated farms.
 
 ## Local files
 
-`scripts/fetch_fieldwatch_data.py --split demo|lab|valid|test` downloads explicit subsets, caps each object at 32 MiB, and writes a manifest of object paths, sizes and SHA-256 hashes. Existing files are reused. These recorded hashes establish provenance of downloaded bytes, not cryptographic endorsement by the dataset authors. For a clean re-download, use a fresh checkout/data directory rather than assuming cached files are immutable.
+`scripts/fetch_inundra_data.py --split demo|lab|valid|test` downloads explicit subsets, caps each object at 32 MiB, and writes a manifest of object paths, sizes and SHA-256 hashes. Existing files are reused. These recorded hashes establish provenance of downloaded bytes, not cryptographic endorsement by the dataset authors. For a clean re-download, use a fresh checkout/data directory rather than assuming cached files are immutable.
 
 Downloads and generated reports stay under ignored `data/` and `artifacts/`. Reviewers should retain the manifest alongside evaluation outputs. A report identifies its radar bytes by SHA-256 and records coordinates/dates; it is not an authenticated acquisition certificate.
 

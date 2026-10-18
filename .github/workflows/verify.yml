@@ -1,4 +1,4 @@
-name: Verify FieldWatch
+name: Verify Inundra
 
 on:
   push:
@@ -38,16 +38,16 @@ jobs:
       - name: Synthetic contract and frontend tests
         run: |
           python -m pytest -q
-          python scripts/check_fieldwatch_lab.py
-          node --check fieldwatch/static/app.js
-          node --check fieldwatch/static/model.js
-          node --test tests/fieldwatch.test.cjs
+          python scripts/check_inundra_lab.py
+          node --check inundra/static/app.js
+          node --check inundra/static/model.js
+          node --test tests/inundra.test.cjs
       - name: Build and smoke-test local-only container
         run: |
-          docker build -t fieldwatch:ci .
-          docker run -d --rm --name fieldwatch-ci --read-only --tmpfs /tmp:rw,nosuid,size=128m --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8000:8000 fieldwatch:ci
-          python scripts/smoke_fieldwatch.py
-          test "$(docker exec fieldwatch-ci id -u)" != "0"
+          docker build -t inundra:ci .
+          docker run -d --rm --name inundra-ci --read-only --tmpfs /tmp:rw,nosuid,size=128m --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8000:8000 inundra:ci
+          python scripts/smoke_inundra.py
+          test "$(docker exec inundra-ci id -u)" != "0"
       - name: Stop test container
         if: always()
-        run: docker stop fieldwatch-ci || true
+        run: docker stop inundra-ci || true

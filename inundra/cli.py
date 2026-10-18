@@ -6,10 +6,10 @@ from pathlib import Path
 import sys
 from tempfile import NamedTemporaryFile
 
-from fieldwatch.engine import InvalidRaster, MAX_BYTES
-from fieldwatch.exports import geojson_export
-from fieldwatch.service import export_report, run_analysis
-from fieldwatch.zone_input import load_zones, MAX_ZONE_BYTES
+from inundra.engine import InvalidRaster, MAX_BYTES
+from inundra.exports import geojson_export
+from inundra.service import export_report, run_analysis
+from inundra.zone_input import load_zones, MAX_ZONE_BYTES
 
 
 def bounded_read(path, limit):
@@ -25,7 +25,7 @@ def save_report(path, payload):
     # Same-directory staging keeps the hard link on one filesystem. Linking is
     # atomic and refuses existing destinations, including dangling symlinks.
     with NamedTemporaryFile(mode='w', encoding='utf-8', dir=path.parent,
-                            prefix='.fieldwatch-', suffix='.tmp') as staging:
+                            prefix='.inundra-', suffix='.tmp') as staging:
         staging.write(payload)
         staging.flush()
         os.fsync(staging.fileno())

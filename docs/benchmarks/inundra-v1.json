@@ -7,7 +7,7 @@
   "protocol": "NoData truth excluded only during scoring. Unknown predictions count as negatives in full recall/IoU. Rejected scenes are entirely unknown for both methods and remain in scoring. Baseline is unfiltered VH Otsu under the same input-admission policy.",
   "manifest_sha256": "3933618cda1fd91cbe6db34b96b1ecfdd0b8298b80894ae7a4b825fc08a1e4a2",
   "pooled": {
-    "fieldwatch": {
+    "inundra": {
       "tp": 1356572,
       "fp": 438521,
       "fn": 1209529,
@@ -36,7 +36,7 @@
   },
   "by_event": {
     "Ghana": {
-      "fieldwatch": {
+      "inundra": {
         "tp": 74515,
         "fp": 10984,
         "fn": 96754,
@@ -64,7 +64,7 @@
       }
     },
     "India": {
-      "fieldwatch": {
+      "inundra": {
         "tp": 474229,
         "fp": 28171,
         "fn": 212278,
@@ -92,7 +92,7 @@
       }
     },
     "Mekong": {
-      "fieldwatch": {
+      "inundra": {
         "tp": 146968,
         "fp": 5820,
         "fn": 63341,
@@ -120,7 +120,7 @@
       }
     },
     "Nigeria": {
-      "fieldwatch": {
+      "inundra": {
         "tp": 78642,
         "fp": 3041,
         "fn": 44620,
@@ -148,7 +148,7 @@
       }
     },
     "Pakistan": {
-      "fieldwatch": {
+      "inundra": {
         "tp": 47948,
         "fp": 96875,
         "fn": 150949,
@@ -176,7 +176,7 @@
       }
     },
     "Paraguay": {
-      "fieldwatch": {
+      "inundra": {
         "tp": 113232,
         "fp": 88153,
         "fn": 127957,
@@ -204,7 +204,7 @@
       }
     },
     "Somalia": {
-      "fieldwatch": {
+      "inundra": {
         "tp": 33872,
         "fp": 52748,
         "fn": 52792,
@@ -232,7 +232,7 @@
       }
     },
     "Spain": {
-      "fieldwatch": {
+      "inundra": {
         "tp": 217316,
         "fp": 34565,
         "fn": 135051,
@@ -260,7 +260,7 @@
       }
     },
     "Sri-Lanka": {
-      "fieldwatch": {
+      "inundra": {
         "tp": 82337,
         "fp": 15622,
         "fn": 297890,
@@ -288,7 +288,7 @@
       }
     },
     "USA": {
-      "fieldwatch": {
+      "inundra": {
         "tp": 87513,
         "fp": 102542,
         "fn": 27897,
@@ -325,7 +325,7 @@
       "sha256": "4555c98d54ea0ca81e681abc75af20d61774fbbcdc3d48992c3378ebdd5887bc",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 370,
         "fp": 0,
         "fn": 14563,
@@ -349,7 +349,7 @@
       "sha256": "8ce880a2236c57b3a4ef9b6c575648d21813e8a10bab2c7bc82cb1fee197e027",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 50,
         "fp": 3,
         "fn": 1357,
@@ -373,7 +373,7 @@
       "sha256": "9a5a69c8e48e75cdacab88616517ac537962616f36bfba450ce00b057a74f2b2",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 251,
         "fn": 0,
@@ -397,7 +397,7 @@
       "sha256": "c606d0560c9c1bc12e476f8609b2eebc85ffa8a1cfbf63c9b53165bdfc277451",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 1236,
         "fp": 113,
         "fn": 2260,
@@ -421,7 +421,7 @@
       "sha256": "d503a6f14f4ad6c65f4799172d3cd698aaf03303ad7afb97903b2c45da6815ec",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 13453,
         "fp": 453,
         "fn": 26068,
@@ -445,7 +445,7 @@
       "sha256": "d59fe3b0acf60b68b0270b7b2639a46142765332abde0edb97108b0a5181fb01",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 55952,
         "fp": 9874,
         "fn": 50019,
@@ -469,7 +469,7 @@
       "sha256": "e48885b39a1bbfc96b1b8dfe08d6c002e8cfc0a93dd6b628cd1b12d483160e3b",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 3454,
         "fp": 257,
         "fn": 851,
@@ -493,7 +493,7 @@
       "sha256": "9b02324cd247cbe8212c73f958f430655972d010de8bab7e79f1c442f25a9bb6",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 18,
         "fn": 0,
@@ -517,7 +517,7 @@
       "sha256": "affd4371d4806abad4fa259298be31c35efdeca18e9aadac3222d7a088215ee7",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 0,
         "fn": 0,
@@ -541,7 +541,7 @@
       "sha256": "81d91cd92dd2f11818d01d93390a8462ed19912d3a0b4a618e536ef1b7217923",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 0,
         "fn": 0,
@@ -565,7 +565,7 @@
       "sha256": "ddc60bf2b66f369f70a29d92f27d95d6f9304af7a0d15356ceb92af5e8cc50b0",
       "event": "Ghana",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 15,
         "fn": 1636,
@@ -589,7 +589,7 @@
       "sha256": "83bc6bca280cb51264028515c944928ea2201386bee411d8bb5cabbcb51cc4a6",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 93675,
         "fp": 5890,
         "fn": 30278,
@@ -613,7 +613,7 @@
       "sha256": "53374c3e29255f1400339f7b32dc6145032eac613e3c808f840203cd7ea4c139",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 100899,
         "fp": 1893,
         "fn": 13140,
@@ -637,7 +637,7 @@
       "sha256": "7cce6e8c3b2b0a1f72cae40bef3fbbeac44228969542cbec41dfae7c05386cd1",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 37658,
         "fp": 673,
         "fn": 79664,
@@ -661,7 +661,7 @@
       "sha256": "550231c166d2592eeffb50e26cee6197c7adbd74cb6b84269843d0a268b5ca55",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 436,
         "fp": 256,
         "fn": 4729,
@@ -685,7 +685,7 @@
       "sha256": "ccd39d95515ed60d19b0e6c767581545b4ea5fd6044624440b1159402ad55e6c",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 651,
         "fp": 461,
         "fn": 5197,
@@ -709,7 +709,7 @@
       "sha256": "b3746c7e3ceaefaa65fe923b1faeff9d0605a260e0707cef3a4aedc12fab018b",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 2113,
         "fp": 210,
         "fn": 4881,
@@ -733,7 +733,7 @@
       "sha256": "7bc4c1a73f6e6631cd1c9a715a7a8db0790e9442cc5172c04f6832626f6bdd42",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 5360,
         "fp": 686,
         "fn": 9188,
@@ -757,7 +757,7 @@
       "sha256": "8f37aec1f4c623f6e7ba2c5a6f5340016aad1edb07b4a33a3dfaa66fb7588a08",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 30,
         "fn": 0,
@@ -781,7 +781,7 @@
       "sha256": "d460ee319bab15012039331aed63136895ef0a6c0fc21b8cf4b579e806b07a25",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 106066,
         "fp": 4983,
         "fn": 8440,
@@ -805,7 +805,7 @@
       "sha256": "d69a706c250dd3dd37ff43eb4969117460abd64d3280bca71fdd9916f4f3d6b1",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 13846,
         "fp": 350,
         "fn": 22803,
@@ -829,7 +829,7 @@
       "sha256": "a56299df37160745abd570528ad50d29de2bc5a3e3b4d2369db5ac6359c5f552",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 3791,
         "fp": 821,
         "fn": 5253,
@@ -853,7 +853,7 @@
       "sha256": "277541a0d4bc7167b968964dba85f2b92d7a9c8591bc1a03b7e8b45ff6377dfc",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 33,
         "fp": 3206,
         "fn": 1312,
@@ -877,7 +877,7 @@
       "sha256": "72587e0fe6fbf840a40d0cf80497f14b183c22b2c1729989e65e0aac6bd4baa9",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 2,
         "fp": 7,
         "fn": 800,
@@ -901,7 +901,7 @@
       "sha256": "3cdb20bbf53e1500de925233db53ab41b49f02116141d2d17aa1b3700551c482",
       "event": "India",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 109699,
         "fp": 8705,
         "fn": 26593,
@@ -925,7 +925,7 @@
       "sha256": "abed88cdb40aa823a3255ea53fdee7afd8ccabdb3e2045734b89c4756bf3a325",
       "event": "Mekong",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 391,
         "fp": 262,
         "fn": 2893,
@@ -949,7 +949,7 @@
       "sha256": "c0030a2e0781b7bc4225d827f753d2f138203db77be404f9d9657dc3d042f6cb",
       "event": "Mekong",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 15,
         "fp": 13,
         "fn": 281,
@@ -973,7 +973,7 @@
       "sha256": "cee6ea28c9f700f7d04b16f036fe504e0e836eab9f1b00420fe332366c985ab3",
       "event": "Mekong",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 137303,
         "fp": 123,
         "fn": 55480,
@@ -997,7 +997,7 @@
       "sha256": "a0a63fe99584a50541d1baab2745803133aff5a8b33992bf25cd1d75711aa3cb",
       "event": "Mekong",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 7576,
         "fp": 27,
         "fn": 2232,
@@ -1021,7 +1021,7 @@
       "sha256": "143aed56655704da0f27412dccf63cafc78f95719995f405b9021c14dea0bf26",
       "event": "Mekong",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 16,
         "fp": 5133,
         "fn": 119,
@@ -1045,7 +1045,7 @@
       "sha256": "a75c863aba464e9e6a39e5a72a602d3afc079e95a798eedf4c061b23be87a435",
       "event": "Mekong",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 1667,
         "fp": 262,
         "fn": 2336,
@@ -1069,7 +1069,7 @@
       "sha256": "99b58fdcad3b27e09a0bb672246cf59f58e1c7e211d290e45485c5321995d7dc",
       "event": "Nigeria",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 830,
         "fp": 1071,
         "fn": 554,
@@ -1093,7 +1093,7 @@
       "sha256": "6d8f6e99ef4a43c090384c662aeecae669faebbdd440465d38692eea3de50d1e",
       "event": "Nigeria",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 43,
         "fp": 80,
         "fn": 1088,
@@ -1117,7 +1117,7 @@
       "sha256": "60721c48b1bc862abdb9e6b0ee93d67590fb058f4581e43f615569b22beff4e0",
       "event": "Nigeria",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 77699,
         "fp": 1350,
         "fn": 42419,
@@ -1141,7 +1141,7 @@
       "sha256": "7674eafc5f76181b40561bb870eabd07b7904384dc7e193158c52584b745db4f",
       "event": "Nigeria",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 70,
         "fp": 540,
         "fn": 559,
@@ -1165,7 +1165,7 @@
       "sha256": "ff1f7b9afce78918808ced5d648d4df28a2047a05f934f649e728bad38533007",
       "event": "Pakistan",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 29346,
         "fp": 887,
         "fn": 142562,
@@ -1189,7 +1189,7 @@
       "sha256": "e5c39467d3f1672fa280077d4a8157d1df6cc41b1d91e0fafee457e2858e310f",
       "event": "Pakistan",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 2126,
         "fp": 5149,
         "fn": 257,
@@ -1213,7 +1213,7 @@
       "sha256": "f613d5439c98554b004bf351b7b6550a89f4275835e7bce7671b35b04efa32c2",
       "event": "Pakistan",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 13910,
         "fp": 13545,
         "fn": 4571,
@@ -1237,7 +1237,7 @@
       "sha256": "34d44eba0a84c57ce202905a55998d5172432eeb72106f3c469edb6c660648f6",
       "event": "Pakistan",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 2252,
         "fp": 34847,
         "fn": 2415,
@@ -1261,7 +1261,7 @@
       "sha256": "b12a55ded38df04c960d9c2f6256eef5ae40c7e46360624a85041f21f7068ede",
       "event": "Pakistan",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 574,
         "fn": 0,
@@ -1285,7 +1285,7 @@
       "sha256": "412d8b25b478d7e34e70394ba2ceebfdb983575b0d10179702d936e50d993dd7",
       "event": "Pakistan",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 314,
         "fp": 41873,
         "fn": 1144,
@@ -1309,7 +1309,7 @@
       "sha256": "d574270d0876e440adfac65762f76a32e67ddcb2508b381480e806e81df3833b",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 1934,
         "fp": 1531,
         "fn": 3583,
@@ -1333,7 +1333,7 @@
       "sha256": "4b9ab4f422fe42a420943c0e5ac408adbdfe33d931ac1a2ec956bb594eb5b784",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 2522,
         "fp": 3804,
         "fn": 4063,
@@ -1357,7 +1357,7 @@
       "sha256": "ded24ef657d3fad062f38a2d4c22f8beb0fb88ad469c8341716e5805cceb0938",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 28664,
         "fp": 49,
         "fn": 3283,
@@ -1381,7 +1381,7 @@
       "sha256": "285b324cfb02da2b5b707d1fe5ff8c4c870e2c3b3f17b49ebdbbe50fcf48bf32",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 152,
         "fp": 48,
         "fn": 29325,
@@ -1405,7 +1405,7 @@
       "sha256": "a8d1f64cc7d9f07e7c6250907c8061c9a4ca1f6a7e603e8fd4d6325eabb7dc84",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 1302,
         "fp": 63360,
         "fn": 1311,
@@ -1429,7 +1429,7 @@
       "sha256": "59056f7dfe3a19baa65b6eaf1479eab473ca60f614ae8bafe1df05d09d6bbfd2",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 14905,
         "fn": 0,
@@ -1453,7 +1453,7 @@
       "sha256": "24ea91212c1b8229e7be1d013d283963232f961d910bd9adcf0df4bab35af5eb",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 44012,
         "fp": 313,
         "fn": 6324,
@@ -1477,7 +1477,7 @@
       "sha256": "a724267ba9655b00f593852b31d5887234297884cd3bd097ff878aa41767001a",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 2486,
         "fp": 972,
         "fn": 284,
@@ -1501,7 +1501,7 @@
       "sha256": "46c517219a6ecd97ad5becbec3d583e78c0a8876fd14a22e58d5051244b4b2f6",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 5190,
         "fp": 35,
         "fn": 2219,
@@ -1525,7 +1525,7 @@
       "sha256": "1e495c046f50b200a40839161ea97aedcc59344a0e2e1a285c33f37b3e0b7e5a",
       "event": "Paraguay",
       "rejection": "Too few valid calibrated radar pixels; check units and NoData.",
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 0,
         "fn": 50026,
@@ -1549,7 +1549,7 @@
       "sha256": "6dee78da18dc8b35a706160fe08eb7a937ef66562809978bcbe32ee4bf604327",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 4957,
         "fp": 2095,
         "fn": 10830,
@@ -1573,7 +1573,7 @@
       "sha256": "543da10448e1f212f9303e47617afd985deb16adb523a235d6473a0b06b34c4c",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 2596,
         "fp": 278,
         "fn": 8948,
@@ -1597,7 +1597,7 @@
       "sha256": "d615a3239b6b6d46a5d8c4e9d65198c31527509a95649a9bd2a46824aa923aa8",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 96,
         "fn": 22,
@@ -1621,7 +1621,7 @@
       "sha256": "0b2635e40584ea1f016f4ffc503748afcd2431cf9330db63eacf900c15eed30c",
       "event": "Paraguay",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 19417,
         "fp": 667,
         "fn": 7739,
@@ -1645,7 +1645,7 @@
       "sha256": "c905fcba8efe764f1c91d9b1fb061da12b797c645ad33b80befb575dc00a5d38",
       "event": "Somalia",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 994,
         "fp": 5852,
         "fn": 2296,
@@ -1669,7 +1669,7 @@
       "sha256": "d3a90e8b4af8b13bfcfd0025bd73b2b1f6cf6b6ee3d577f317184ca5fb4231a8",
       "event": "Somalia",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 80,
         "fp": 17799,
         "fn": 597,
@@ -1693,7 +1693,7 @@
       "sha256": "352c7eee098e572232ddcd7694f2197d8ff261f6262a2a69ac7868b1ee758e70",
       "event": "Somalia",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 6718,
         "fp": 5825,
         "fn": 18536,
@@ -1717,7 +1717,7 @@
       "sha256": "f6ad2e32d1bfd1d2e5684733bb4baf648b960257d5b210309a9b12ae12f94632",
       "event": "Somalia",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 0,
         "fp": 9193,
         "fn": 12,
@@ -1741,7 +1741,7 @@
       "sha256": "18bf3d89d33e83e7323775fca71974dda3e610e2a68095f81fb06b38a2fd972e",
       "event": "Somalia",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 6525,
         "fp": 12881,
         "fn": 6169,
@@ -1765,7 +1765,7 @@
       "sha256": "a9c284e8e99bd544383d0a455882b221bb95f7f05be81b98f51442b19570f678",
       "event": "Somalia",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 19555,
         "fp": 1198,
         "fn": 25182,
@@ -1789,7 +1789,7 @@
       "sha256": "5ffd422a0375aa9113e078d7481643355aa9109dbaa459e03b659c0bde503787",
       "event": "Spain",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 111,
         "fp": 3758,
         "fn": 135,
@@ -1813,7 +1813,7 @@
       "sha256": "1a1d590745a4337683534636f85d005400d9b81dd21d1c8cc768e663dce5ec91",
       "event": "Spain",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 708,
         "fp": 8787,
         "fn": 1429,
@@ -1837,7 +1837,7 @@
       "sha256": "d751a06ea72de3a2b7b4bd4d79513a0c29c5ff88d09e0ab2b6e79cd7af5cf5e3",
       "event": "Spain",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 78114,
         "fp": 565,
         "fn": 26093,
@@ -1861,7 +1861,7 @@
       "sha256": "6c24bf791372da5e93450195eac8d676a7ef917884dfb479dafe4a565543b19a",
       "event": "Spain",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 38789,
         "fp": 5115,
         "fn": 31246,
@@ -1885,7 +1885,7 @@
       "sha256": "c15ceaa0f70d1ea23cc378251244f61307e6857f7503ff9c673db126a82496c9",
       "event": "Spain",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 11361,
         "fp": 14641,
         "fn": 11375,
@@ -1909,7 +1909,7 @@
       "sha256": "2a69a686bdb5aa7ed0736d8a428a18fdf819f2b2862db75ff3e5f7b902b25207",
       "event": "Spain",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 88233,
         "fp": 1699,
         "fn": 64773,
@@ -1933,7 +1933,7 @@
       "sha256": "0483b94b9582bb8773aa6a2d13b207e02bc09c59fd75f713b845bc729a93e916",
       "event": "Sri-Lanka",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 1575,
         "fp": 6244,
         "fn": 5156,
@@ -1957,7 +1957,7 @@
       "sha256": "e82f3c2780d62a5651c62446ad24920c9833e4a9f0f0704fe465ebb7ea75e53a",
       "event": "Sri-Lanka",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 1867,
         "fp": 3006,
         "fn": 710,
@@ -1981,7 +1981,7 @@
       "sha256": "ae5d25f74fe6c996adf86862a59448b62bb44a4c6440240515e8d664053784ed",
       "event": "Sri-Lanka",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 2674,
         "fp": 12,
         "fn": 254594,
@@ -2005,7 +2005,7 @@
       "sha256": "723812c3822f6762c90f1fa6e2ba4bcfae460fe1cc6fba00255fc46b6ac81528",
       "event": "Sri-Lanka",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 493,
         "fp": 1418,
         "fn": 537,
@@ -2029,7 +2029,7 @@
       "sha256": "945fc64fd2b61eae40aa73086f60ac7136d1ef90d6f1d973caa6ed5d9eb7140f",
       "event": "Sri-Lanka",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 4803,
         "fp": 1673,
         "fn": 3800,
@@ -2053,7 +2053,7 @@
       "sha256": "fe77bf2aa42f3c5f238415efe88923b3243ad08d3469e2b2cbba845b1c402e98",
       "event": "Sri-Lanka",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 2841,
         "fp": 1990,
         "fn": 14502,
@@ -2077,7 +2077,7 @@
       "sha256": "e16e21f19409fae3daa3b4bc7c4c2932e1733a86a5207f20fb417180c312af95",
       "event": "Sri-Lanka",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 14,
         "fp": 136,
         "fn": 4263,
@@ -2101,7 +2101,7 @@
       "sha256": "9aa55561560a85970619498fc5cac412af8bac8a15405ba7f040bc8cf5bf6b29",
       "event": "Sri-Lanka",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 1078,
         "fp": 67,
         "fn": 814,
@@ -2125,7 +2125,7 @@
       "sha256": "8d51be4c5e9a9bb87ae95b69ae2ba10a59ac30d84056b6d65d5cbc44af2e515d",
       "event": "Sri-Lanka",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 66992,
         "fp": 1076,
         "fn": 13514,
@@ -2149,7 +2149,7 @@
       "sha256": "0ec326c52448475242517cfe160b63eceb5af4c549474d3b6fbfc718a3c03abf",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 39348,
         "fp": 124,
         "fn": 5119,
@@ -2173,7 +2173,7 @@
       "sha256": "bb7fcc928f1bc6a5764e1c6262df85b452db4a3b90a6a6acf6a0a8c36631881e",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 10023,
         "fp": 5983,
         "fn": 5416,
@@ -2197,7 +2197,7 @@
       "sha256": "fb42f489d9ce914c566cf126fb59d44a93c94b134a05925e39ac279a4378e4cf",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 585,
         "fp": 6463,
         "fn": 700,
@@ -2221,7 +2221,7 @@
       "sha256": "c07ad61e2736333cb552c363335e17a52477769e32fec1e0e3638b46bb2a8090",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 1099,
         "fp": 16887,
         "fn": 547,
@@ -2245,7 +2245,7 @@
       "sha256": "401c1f7fdad3bc0af494cb66d30e2388d06b8f7003d5fd4f9f3b9626063f22b1",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 3269,
         "fp": 5892,
         "fn": 554,
@@ -2269,7 +2269,7 @@
       "sha256": "f60e348a778558717eeb93f38c418222f52e5bf451f843fbb1900feaf5923171",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 378,
         "fp": 1475,
         "fn": 2349,
@@ -2293,7 +2293,7 @@
       "sha256": "b793f503115d0e6185afecd2b40daaa85e1d839869527f3e8438802c61df3a32",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 1419,
         "fp": 6739,
         "fn": 733,
@@ -2317,7 +2317,7 @@
       "sha256": "0745bc1a71a7b2ad4248a979dac866c6615f28d3d6a5d6e1df726825ed9abf6f",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 3368,
         "fp": 13715,
         "fn": 470,
@@ -2341,7 +2341,7 @@
       "sha256": "c9ff1e645dbfdee3c8b182cc65ab793372bade004f5900cf744d8167bfa7bacc",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 8588,
         "fp": 4489,
         "fn": 903,
@@ -2365,7 +2365,7 @@
       "sha256": "6f0247e1ef023c7080a3b0777bb2a3d8bdc6c3c6e24fc72c9af6e53630d03db9",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 1621,
         "fp": 1792,
         "fn": 501,
@@ -2389,7 +2389,7 @@
       "sha256": "abb67dbb9d5fd92443e5acd117996b9a0ccfbd95326aedea02aeb9a354a65d01",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 14173,
         "fp": 20305,
         "fn": 6358,
@@ -2413,7 +2413,7 @@
       "sha256": "0daa6f250a8fa5c2be89239904a26ec4ef984e8cecc12b7c5b998a8df4733545",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 412,
         "fp": 2439,
         "fn": 2598,
@@ -2437,7 +2437,7 @@
       "sha256": "e1072a4a217074bc10194920b958c9074c7aa68e674616d998f3ccfac058c2bc",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 2510,
         "fp": 10409,
         "fn": 752,
@@ -2461,7 +2461,7 @@
       "sha256": "b54323b62f6490f8a7286f3bdf77a7e1b1b659d2c90412112f78bf4a3ac917df",
       "event": "USA",
       "rejection": null,
-      "fieldwatch": {
+      "inundra": {
         "tp": 720,
         "fp": 5830,
         "fn": 897,

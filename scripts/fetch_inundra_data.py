@@ -1,7 +1,7 @@
 """Download explicit Sen1Floods11 subsets; labels are for evaluation, not inference.
 
-Usage: python scripts/fetch_fieldwatch_data.py --split demo|lab|valid|test
-Data stays in ignored data/fieldwatch. No cloud credentials are needed.
+Usage: python scripts/fetch_inundra_data.py --split demo|lab|valid|test
+Data stays in ignored data/inundra. No cloud credentials are needed.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -17,7 +17,7 @@ import httpx
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "https://storage.googleapis.com/sen1floods11/v1.1/"
 FOLDER = "data/flood_events/HandLabeled/"
-DATA = ROOT / "data" / "fieldwatch"
+DATA = ROOT / "data" / "inundra"
 
 
 def fetch(client, key):
@@ -53,7 +53,7 @@ def main():
             pairs = [next(p for p in pairs if p[0].startswith(country + "_")) for country in ("Spain", "India", "USA")]
         if args.split == 'lab':
             sys.path.insert(0,str(ROOT))
-            from fieldwatch.lab import CASES
+            from inundra.lab import CASES
             selected={item['chip']+'_S1Hand.tif' for item in CASES if item['kind']=='real_replay'}
             pairs=[p for p in pairs if p[0] in selected]
             if len(pairs)!=len(selected):raise ValueError('Lab case not found in the public test split.')

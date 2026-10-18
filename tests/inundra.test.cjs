@@ -1,6 +1,6 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
-const model=require('../fieldwatch/static/model.js');
+const model=require('../inundra/static/model.js');
 test('small nonzero areas are never displayed as zero hectares',()=>{
   assert.equal(model.areaLabel(.044),'<0.1');assert.equal(model.areaLabel(.001),'<0.1');
   assert.equal(model.areaLabel(0),'0');assert.equal(model.areaLabel(.1),'0.1');assert.equal(model.areaLabel(1.25),'1.3');
@@ -47,6 +47,28 @@ function reviewFixture(){
     images:{radar:'pixels'},generated_at:'2020-01-11T00:00:00Z'};
 }
 const savedReview={outcome:'follow_up',note:'Check local irrigation context.',recorded_at:'2020-01-11T00:00:00Z'};
+test('brand-only rename permits matching v0.7 notes without changing findings',()=>{
+  const report=reviewFixture();report.engine.name='Inundra';
+  const exported=JSON.parse(JSON.stringify(model.reviewExport(report,{a:savedReview})));
+  exported.engine.name='FieldWatch';
+  const before=JSON.stringify(report);
+  assert.equal(model.restoreReviews(report,exported).a.note,savedReview.note);
+  assert.equal(JSON.stringify(report),before);
+  const geographic=model.geojsonExport(report);
+  assert.equal(geographic.inundra.schema_version,'geojson-review-v2');
+  assert.equal(geographic.fieldwatch,undefined);
+});
+test('download filenames use the new name for review and geographic handoffs',async()=>{
+  const ui=await reviewUI();
+  // Test the actual event handlers through their requested Blob contents.
+  ui.get('geojson-export-button').click();
+  const saved=JSON.parse(await ui.captured.blob.text());
+  assert.equal(saved.inundra.schema_version,'geojson-review-v2');
+  assert.equal(saved.fieldwatch,undefined);
+  const app=require('node:fs').readFileSync(require.resolve('../inundra/static/app.js'),'utf8');
+  assert.ok(app.includes('inundra-review-${'));
+  assert.ok(app.includes('inundra-zones-${'));
+});
 function temporalFixture(){
   return {policy:'paired-evidence-v1',paired_assessed_ha:.75,paired_uncertain_ha:.25,
     paired_assessed_fraction:.75,water_without_baseline_ha:.25,
@@ -59,13 +81,13 @@ test('temporal export preserves false and zero and separates unavailable old met
   assert.equal(props.observed_water_baseline_complete,false);
   assert.equal(props.water_without_baseline_ha,0);
   assert.equal(props.temporal_policy,'paired-evidence-v1');
-  assert.deepEqual(exported.fieldwatch.temporal_support,support);
-  exported.fieldwatch.temporal_support.paired_assessed_fraction=0;
+  assert.deepEqual(exported.inundra.temporal_support,support);
+  exported.inundra.temporal_support.paired_assessed_fraction=0;
   assert.equal(support.paired_assessed_fraction,.75);
   const old=model.geojsonExport(reviewFixture());
   assert.equal(old.features[0].properties.observed_water_baseline_complete,null);
   assert.equal(old.features[0].properties.water_without_baseline_ha,null);
-  assert.equal(old.fieldwatch.temporal_support,null);
+  assert.equal(old.inundra.temporal_support,null);
 });
 test('note restoration requires matching temporal support and rejects older context',()=>{
   const report=reviewFixture();report.zones[0].temporal_support=temporalFixture();
@@ -120,7 +142,7 @@ test('timeline carries scene-level paired support and baseline warning',async()=
   assert.match(row.children[2],/does not rule out new flooding/);
 });
 test('temporal detail target exists in shipped HTML',()=>{
-  const html=require('node:fs').readFileSync(require.resolve('../fieldwatch/static/index.html'),'utf8');
+  const html=require('node:fs').readFileSync(require.resolve('../inundra/static/index.html'),'utf8');
   assert.match(html,/<p id="detail-temporal" hidden><\/p>/);
 });
 test('draft tracking distinguishes untouched and edited notes',()=>{
@@ -182,12 +204,12 @@ async function reviewUI(){
   const get=id=>{if(!elements.has(id)){const item=new Element();item.id=id;elements.set(id,item);}return elements.get(id);};
   const query=selector=>selector.split(',').flatMap(s=>s.startsWith('#')?[get(s.slice(1))]:s==='.example'?get('examples').children:s==='.lab-card'?get('lab-cases').children:[]);
   const document={getElementById:get,querySelectorAll:query,createElement:()=>new Element(),createElementNS:()=>new Element(),createTextNode:text=>text};
-  const context=vm.createContext({document,window:{FieldWatchModel:model,addEventListener:(n,f)=>events[n]=f,
+  const context=vm.createContext({document,window:{InundraModel:model,addEventListener:(n,f)=>events[n]=f,
     confirm:()=>{captured.confirmCalls++;return captured.confirm;}},
     fetch:async()=>({ok:true,json:async()=>[{id:'india',title:'India',date:'2020-01-10',available:false}]}),
     AbortController,AbortSignal,Blob,FormData,URL:{createObjectURL:blob=>{captured.blob=blob;return 'blob:test';},revokeObjectURL(){}},
     setTimeout:(fn,ms)=>{captured.timers.push({fn,ms});return captured.timers.length;},clearTimeout(){}});
-  vm.runInContext(fs.readFileSync(require.resolve('../fieldwatch/static/app.js'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(require.resolve('../inundra/static/app.js'),'utf8'),context);
   await new Promise(resolve=>setImmediate(resolve));
   const report=reviewFixture();Object.assign(report.source,{width:64,height:64,bounds:[0,0,1,1],transform:[.01,0,0,0,-.01,1]});
   Object.assign(report,{name:'Original observation',zone_basis:'test zones',summary:{water_observed_ha:1,uncertain_ha:0,assessed_fraction:1},trace:[],elapsed_ms:1,images:{radar:'data:image/png;base64,AA==',evidence:'data:image/png;base64,AA=='}});
@@ -247,12 +269,12 @@ test('GeoJSON exports geographic boundaries, provenance and separate human annot
   assert.deepEqual(feature.geometry,report.zones[0].geometry);
   assert.equal(feature.properties.review_gate,'insufficient_evidence');
   assert.equal(feature.properties.human_note,savedReview.note);assert.equal(feature.properties.human_review_unverified,true);
-  assert.equal(feature.properties.source_sha256,report.source.sha256);assert.deepEqual(exported.fieldwatch.lab,report.lab);
+  assert.equal(feature.properties.source_sha256,report.source.sha256);assert.deepEqual(exported.inundra.lab,report.lab);
   assert.equal(exported.features.length,1);assert.equal(JSON.stringify(exported).includes('pixel_geometry'),false);
   assert.equal(JSON.stringify(exported).includes('pixels'),true); // Pixel count is a scalar, not a pixel payload.
   assert.equal(exported.images,undefined);assert.equal(JSON.stringify(report),before);
   feature.geometry.coordinates[0][0][0]=55;feature.properties.withheld_claims.push('modified');
-  exported.fieldwatch.source.sha256='modified';assert.equal(JSON.stringify(report),before);
+  exported.inundra.source.sha256='modified';assert.equal(JSON.stringify(report),before);
 });
 test('GeoJSON preserves absent comparison and date as null rather than zero',()=>{
   const report=reviewFixture();report.reference=null;report.source.observed_on=null;

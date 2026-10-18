@@ -12,11 +12,11 @@ import pytest
 from rasterio.io import MemoryFile
 from shapely.geometry import shape
 
-from fieldwatch.cli import main, save_report
-from fieldwatch.engine import default_zones, read_raster
-from fieldwatch.exports import geojson_export
-from fieldwatch.lab import run_case, synthetic_inputs
-from fieldwatch.service import run_analysis
+from inundra.cli import main, save_report
+from inundra.engine import default_zones, read_raster
+from inundra.exports import geojson_export
+from inundra.lab import run_case, synthetic_inputs
+from inundra.service import run_analysis
 
 
 CASES = ['new-water', 'repeat-water', 'missing-earlier', 'paddy-context',
@@ -29,10 +29,10 @@ def test_export_preserves_measurements_and_gates_without_images(identifier):
     before = deepcopy(report)
     exported = json.loads(json.dumps(geojson_export(report), allow_nan=False))
     assert exported['type'] == 'FeatureCollection'
-    assert exported['fieldwatch']['lab'] == report['lab']
-    assert exported['fieldwatch']['source'] == report['source']
-    assert exported['fieldwatch']['policy'] == report['policy']
-    assert exported['fieldwatch']['temporal_support'] == report['temporal_support']
+    assert exported['inundra']['lab'] == report['lab']
+    assert exported['inundra']['source'] == report['source']
+    assert exported['inundra']['policy'] == report['policy']
+    assert exported['inundra']['temporal_support'] == report['temporal_support']
     assert len(exported['features']) == len(report['zones'])
     for feature, zone in zip(exported['features'], report['zones']):
         props = feature['properties']
@@ -65,7 +65,7 @@ def test_export_preserves_measurements_and_gates_without_images(identifier):
 def test_single_observation_keeps_missing_change_distinct_from_zero():
     raw, _ = synthetic_inputs('new-water')
     exported = geojson_export(run_analysis(raw))
-    assert exported['fieldwatch']['reference'] is None
+    assert exported['inundra']['reference'] is None
     for feature in exported['features']:
         props = feature['properties']
         assert props['observed_on'] is None
@@ -86,7 +86,7 @@ def test_annotations_are_separate_and_export_does_not_alias_report():
     assert props['human_note'] == reviews['tiny']['note']
     assert 'Must not leak' not in json.dumps(exported)
     exported['features'][0]['geometry']['coordinates'][0][0][0] = 0
-    exported['fieldwatch']['source']['sha256'] = 'changed'
+    exported['inundra']['source']['sha256'] = 'changed'
     props['withheld_claims'].clear()
     assert report['zones'][0]['geometry']['coordinates'][0][0][0] == 92.004
     assert report['source']['sha256'] != 'changed'
@@ -129,7 +129,7 @@ def test_projected_raster_exports_geographic_not_pixel_or_projected_geometry():
     for feature in exported['features']:
         for lon, lat in feature['geometry']['coordinates'][0]:
             assert 91 < lon < 93 and 25 < lat < 27
-    assert exported['fieldwatch']['source']['crs'] == 'EPSG:32646'
+    assert exported['inundra']['source']['crs'] == 'EPSG:32646'
     assert 'crs' not in exported  # Source CRS is provenance, not a GeoJSON CRS override.
 
 
@@ -141,7 +141,7 @@ def test_browser_and_python_exports_match_on_actual_pipeline(identifier):
     report = run_case(identifier)
     reviews = {report['zones'][0]['id']: {'outcome': 'follow_up', 'note': 'पानी? Verify locally.',
                'recorded_at': '2020-01-11T00:00:00Z'}}
-    script = "const m=require('./fieldwatch/static/model.js');let s='';process.stdin.setEncoding('utf8');process.stdin.on('data',v=>s+=v);process.stdin.on('end',()=>{const x=JSON.parse(s);process.stdout.write(JSON.stringify(m.geojsonExport(x.report,x.reviews)));});"
+    script = "const m=require('./inundra/static/model.js');let s='';process.stdin.setEncoding('utf8');process.stdin.on('data',v=>s+=v);process.stdin.on('end',()=>{const x=JSON.parse(s);process.stdout.write(JSON.stringify(m.geojsonExport(x.report,x.reviews)));});"
     result = subprocess.run([node, '-e', script], input=json.dumps({'report': report, 'reviews': reviews}),
                             text=True, capture_output=True, check=True, timeout=15,
                             cwd=Path(__file__).resolve().parents[1])
@@ -184,7 +184,7 @@ def test_geojson_cli_preserves_custom_polygons_and_pair_metadata(tmp_path):
                  '--format', 'geojson', '--output', str(output)]) == 0
     exported = json.loads(output.read_text())
     assert len(exported['features']) == 2
-    assert exported['fieldwatch']['reference']['interval_days'] == 9
+    assert exported['inundra']['reference']['interval_days'] == 9
     assert all(f['properties']['new_water_candidate_ha'] == 0 for f in exported['features'])
 
 
@@ -192,7 +192,7 @@ def test_geojson_cli_preserves_custom_polygons_and_pair_metadata(tmp_path):
 def test_failed_save_never_publishes_partial_output_or_leaves_staging(tmp_path, monkeypatch, operation):
     def fail(*args, **kwargs):
         raise OSError('Simulated storage failure')
-    monkeypatch.setattr('fieldwatch.cli.os.'+operation, fail)
+    monkeypatch.setattr('inundra.cli.os.'+operation, fail)
     output = tmp_path/'report.json'
     with pytest.raises(OSError):
         save_report(output, '{"complete":true}')
@@ -205,11 +205,11 @@ def test_failed_cli_save_returns_error_without_leaving_report(tmp_path, monkeypa
     source = tmp_path/'radar.tif'; source.write_bytes(raw)
     def fail(*args):
         raise OSError('Sensitive system detail must not appear in stderr')
-    monkeypatch.setattr('fieldwatch.cli.os.fsync', fail)
+    monkeypatch.setattr('inundra.cli.os.fsync', fail)
     output = tmp_path/'report.json'
     assert main([str(source), '--date', '2020-01-10', '--output', str(output)]) == 2
     assert not output.exists()
-    assert not list(tmp_path.glob('.fieldwatch-*'))
+    assert not list(tmp_path.glob('.inundra-*'))
     assert 'Sensitive system detail' not in capsys.readouterr().err
 
 
@@ -224,7 +224,7 @@ def test_save_refuses_existing_and_dangling_symlinks(tmp_path, target_exists):
         save_report(output, 'replacement')
     assert output.is_symlink()
     assert target.read_text() == 'original' if target_exists else not target.exists()
-    assert not list(tmp_path.glob('.fieldwatch-*'))
+    assert not list(tmp_path.glob('.inundra-*'))
 
 
 def test_complete_report_is_private_and_unicode_safe(tmp_path):
@@ -233,7 +233,7 @@ def test_complete_report_is_private_and_unicode_safe(tmp_path):
     assert output.read_text(encoding='utf-8') == text
     if os.name == 'posix':
         assert output.stat().st_mode & 0o777 == 0o600
-    assert not list(tmp_path.glob('.fieldwatch-*'))
+    assert not list(tmp_path.glob('.inundra-*'))
 
 
 def test_encoding_failure_removes_staging_without_publishing(tmp_path):
@@ -257,4 +257,4 @@ def test_competing_saves_publish_exactly_one_complete_report(tmp_path):
         outcomes = list(pool.map(attempt, payloads))
     winners = [value for value in outcomes if value is not None]
     assert len(winners) == 1 and output.read_text() == winners[0]
-    assert not list(tmp_path.glob('.fieldwatch-*'))
+    assert not list(tmp_path.glob('.inundra-*'))

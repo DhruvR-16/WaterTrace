@@ -9,11 +9,11 @@ import rasterio
 from rasterio.io import MemoryFile
 from fastapi.testclient import TestClient
 
-from fieldwatch.engine import InvalidRaster, classify, compare, default_zones, geographic_bounds, pixel_areas, read_raster, summarize_zones
-from fieldwatch.limits import RequestLimits
-from fieldwatch.main import app
-from fieldwatch.service import export_report, run_analysis
-from scripts.evaluate_fieldwatch import evaluate, metrics, rates
+from inundra.engine import InvalidRaster, classify, compare, default_zones, geographic_bounds, pixel_areas, read_raster, summarize_zones
+from inundra.limits import RequestLimits
+from inundra.main import app
+from inundra.service import export_report, run_analysis
+from scripts.evaluate_inundra import evaluate, metrics, rates
 
 
 def tif(*, data=None, width=96, height=96, count=2, crs="EPSG:4326", transform=None, nodata=-9999):
@@ -223,14 +223,14 @@ def test_nonlocal_host_is_rejected():
 
 
 def test_geojson_limit_counts_utf8_bytes():
-    from fieldwatch.main import parse_zones
+    from inundra.main import parse_zones
     from fastapi import HTTPException
     with pytest.raises(HTTPException) as error:parse_zones('水'*70_000)
     assert error.value.status_code==413
 
 
 def test_cli_private_no_overwrite(tmp_path):
-    from fieldwatch.cli import main
+    from inundra.cli import main
     source=tmp_path/'input.tif';source.write_bytes(tif())
     destination=tmp_path/'report.json'
     args=[str(source),'--date','2020-01-01','--output',str(destination)]
@@ -244,7 +244,7 @@ def test_cli_private_no_overwrite(tmp_path):
 
 
 def test_cli_invalid_input_does_not_create_report(tmp_path):
-    from fieldwatch.cli import main
+    from inundra.cli import main
     source=tmp_path/'bad.tif';source.write_bytes(b'not a raster')
     output=tmp_path/'result.json'
     assert main([str(source),'--date','2020-01-01','--output',str(output)])==2
@@ -258,7 +258,7 @@ def test_api_duplicate_fields():
 
 
 def test_private_errors_do_not_escape(monkeypatch):
-    import fieldwatch.main as module
+    import inundra.main as module
     def fail(*a,**kw):raise RuntimeError('secret private filesystem path')
     monkeypatch.setattr(module,'run_analysis',fail)
     with TestClient(app) as client:

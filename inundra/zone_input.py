@@ -2,7 +2,7 @@
 import json
 import math
 
-from fieldwatch.engine import InvalidRaster
+from inundra.engine import InvalidRaster
 
 MAX_ZONE_BYTES = 200_000
 MAX_JSON_DEPTH = 32

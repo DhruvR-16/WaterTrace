@@ -49,10 +49,10 @@
       return {type:'Feature',id:zone.id,geometry,properties};
     });
     const metadata=Object.fromEntries(['source','reference','engine','policy','reference_policy','zone_basis','limitations','lab','context','temporal_support'].map(k=>[k,report[k]??null]));
-    Object.assign(metadata,{schema_version:'geojson-review-v1',geometry_role:'review_zone_boundaries_not_water_segmentation',
+    Object.assign(metadata,{schema_version:'geojson-review-v2',geometry_role:'review_zone_boundaries_not_water_segmentation',
       area_scope:'scene_overlap_pixel_centers',
       review_notice:'Human annotations are unverified, not algorithmic findings. Locations and notes may be sensitive. Use the full review JSON to restore notes.'});
-    return JSON.parse(JSON.stringify({type:'FeatureCollection',fieldwatch:metadata,features}));
+    return JSON.parse(JSON.stringify({type:'FeatureCollection',inundra:metadata,features}));
   }
   function canonical(value, depth=0) {
     if(depth>32)throw new Error('Review export is too deeply nested.');
@@ -61,13 +61,13 @@
     return value;
   }
   function reviewContext(report) {
-    if(!report || report.schema_version!=='1.0' || !report.source?.sha256 || !report.engine?.policy || !Array.isArray(report.zones))throw new Error('Choose a FieldWatch review export.');
+    if(!report || report.schema_version!=='1.0' || !report.source?.sha256 || !report.engine?.policy || !Array.isArray(report.zones))throw new Error('Choose an Inundra review export.');
     return JSON.stringify(canonical({schema_version:report.schema_version,source:report.source,reference:report.reference,
       engine_policy:report.engine.policy,policy:report.policy,reference_policy:report.reference_policy,
       zones:[...report.zones].sort((a,b)=>String(a.id).localeCompare(String(b.id)))}));
   }
   function restoreReviews(report, exported) {
-    if(!exported || exported.images || !Array.isArray(exported.human_reviews) || exported.human_reviews.length>100)throw new Error('Choose an image-free FieldWatch review export with at most 100 notes.');
+    if(!exported || exported.images || !Array.isArray(exported.human_reviews) || exported.human_reviews.length>100)throw new Error('Choose an image-free Inundra review export with at most 100 notes.');
     if(reviewContext(report)!==reviewContext(exported))throw new Error('Review does not match this observation, dates, policy and zone geometry. Load the original inputs first.');
     const reviews=Object.create(null),ids=new Set(report.zones.map(z=>z.id));
     for(const row of exported.human_reviews){
@@ -95,5 +95,5 @@
   }
   const api={statuses,areaLabel,validateResult,reviewExport,geojsonExport,reviewChanged,restoreReviews,pixelToGeo,featureFromPoints};
   if (typeof module !== 'undefined' && module.exports) module.exports=api;
-  else root.FieldWatchModel=api;
+  else root.InundraModel=api;
 })(typeof window !== 'undefined' ? window : globalThis);

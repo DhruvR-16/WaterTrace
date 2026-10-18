@@ -4,11 +4,11 @@
 
 ## Run
 
-Follow the main README setup, then run `python scripts/fetch_fieldwatch_data.py --split lab` using the virtual environment. Open **Evidence Lab** in the top bar. The nine synthetic exercises need no dataset download; the four real replays require approximately 6.8 MB. For headless checks, run `python scripts/check_fieldwatch_lab.py` (optional `--output artifacts/lab-checks.json`, refuses overwrite).
+Follow the main README setup, then run `python scripts/fetch_inundra_data.py --split lab` using the virtual environment. Open **Evidence Lab** in the top bar. The nine synthetic exercises need no dataset download; the four real replays require approximately 6.8 MB. For headless checks, run `python scripts/check_inundra_lab.py` (optional `--output artifacts/lab-checks.json`, refuses overwrite).
 
 ## Real contrast cases
 
-All four were selected **after inspecting the exposed v1 test results**. The stronger India chip is the highest-IoU India chip in that set. The others are handpicked failures. Never average these four into a general accuracy claim; use the complete [90-chip benchmark](FIELDWATCH_BENCHMARK.md), which also is no longer blind for future development.
+All four were selected **after inspecting the exposed v1 test results**. The stronger India chip is the highest-IoU India chip in that set. The others are handpicked failures. Never average these four into a general accuracy claim; use the complete [90-chip benchmark](INUNDRA_BENCHMARK.md), which also is no longer blind for future development.
 
 | Case / acquisition | Chip | Precision | Recall | IoU | What to inspect |
 |---|---|---:|---:|---:|---|
@@ -49,4 +49,4 @@ These artificial 96×96 scenes exercise the actual ingestion/classification/repo
 
 ## Boundaries before external use
 
-The pixel policy is still `surface-water-screen-v1`; these additions do not improve its measured segmentation accuracy. Real matched temporal validation, verified agricultural polygons, stronger event-disjoint comparisons, practitioner review and upstream data/media permissions remain necessary. Read [data provenance](FIELDWATCH_DATA.md) before redistributing imagery or derived previews. AWS deployment remains deferred by the owner. Do not describe the prototype as a warning service or recommend entering a flood-affected field from its output.
+The pixel policy is still `surface-water-screen-v1`; these additions do not improve its measured segmentation accuracy. Real matched temporal validation, verified agricultural polygons, stronger event-disjoint comparisons, practitioner review and upstream data/media permissions remain necessary. Read [data provenance](INUNDRA_DATA.md) before redistributing imagery or derived previews. AWS deployment remains deferred by the owner. Do not describe the prototype as a warning service or recommend entering a flood-affected field from its output.

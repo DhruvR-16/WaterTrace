@@ -8,9 +8,9 @@ import numpy as np
 from affine import Affine
 from rasterio.io import MemoryFile
 
-from fieldwatch import catalog
-from fieldwatch.engine import InvalidRaster, classify, default_zones, read_raster
-from fieldwatch.service import png, run_analysis
+from inundra import catalog
+from inundra.engine import InvalidRaster, classify, default_zones, read_raster
+from inundra.service import png, run_analysis
 
 CASES = [
     {'id':'india-stronger','title':'India · stronger overlap','kind':'real_replay', 'chip':'India_80221','date':'2016-08-12',

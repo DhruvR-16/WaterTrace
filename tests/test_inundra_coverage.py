@@ -7,9 +7,9 @@ from pyproj import Transformer
 import pytest
 from rasterio.io import MemoryFile
 
-from fieldwatch.decisions import review_decision
-from fieldwatch.engine import BOUNDARY_TOLERANCE_PIXELS, default_zones, read_raster, summarize_zones
-from fieldwatch.lab import run_case
+from inundra.decisions import review_decision
+from inundra.engine import BOUNDARY_TOLERANCE_PIXELS, default_zones, read_raster, summarize_zones
+from inundra.lab import run_case
 
 
 @pytest.fixture(params=['EPSG:4326', 'EPSG:32646'])

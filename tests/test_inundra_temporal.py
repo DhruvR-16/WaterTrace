@@ -7,12 +7,12 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from fieldwatch.decisions import review_decision
-from fieldwatch.engine import temporal_summary
-from fieldwatch.exports import geojson_export
-from fieldwatch.lab import encode, run_case, synthetic_inputs
-from fieldwatch.main import app
-from fieldwatch.service import run_analysis
+from inundra.decisions import review_decision
+from inundra.engine import temporal_summary
+from inundra.exports import geojson_export
+from inundra.lab import encode, run_case, synthetic_inputs
+from inundra.main import app
+from inundra.service import run_analysis
 
 
 @pytest.mark.parametrize('current,earlier', itertools.product(range(3), repeat=2))
@@ -50,7 +50,7 @@ def test_unpaired_is_unavailable_not_zero():
     assert report['temporal_support'] is None
     assert all(z['temporal_support'] is None for z in report['zones'])
     exported = geojson_export(report)
-    assert exported['fieldwatch']['temporal_support'] is None
+    assert exported['inundra']['temporal_support'] is None
     for feature in exported['features']:
         for key in ('water_without_baseline_ha', 'paired_assessed_fraction', 'observed_water_baseline_complete'):
             assert feature['properties'][key] is None

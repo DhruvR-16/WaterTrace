@@ -1,6 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const M = window.FieldWatchModel;
+const M = window.InundraModel;
 const state = {report:null,acceptedInputs:null,pendingReview:null,example:null,lab:null,upload:null,zones:null,reviews:Object.create(null),reviewsDirty:false,selected:null,filter:'all',controller:null,drawing:false,points:[]};
 const number = value => new Intl.NumberFormat('en',{maximumFractionDigits:1}).format(value);
 const percent = value => `${Math.round(value*100)}%`;
@@ -65,7 +65,7 @@ async function analyze() {
     }
     state.report=M.validateResult(result);state.selected=result.zones[0]?.id;rendering=true;render();state.acceptedInputs=inputs;
   }catch(error){
-    const reason=controller.signal.aborted?(timedOut?'Analysis timed out. The server may still finish.':'Stopped waiting. The server may still finish.'):rendering?'The response could not be displayed.':error instanceof TypeError?'Cannot reach the local service. Start FieldWatch and retry.':error.message;
+    const reason=controller.signal.aborted?(timedOut?'Analysis timed out. The server may still finish.':'Stopped waiting. The server may still finish.'):rendering?'The response could not be displayed.':error instanceof TypeError?'Cannot reach the local service. Start Inundra and retry.':error.message;
     clearReport();
     if(previous){
       Object.assign(state,previous.inputs,{report:previous.report,acceptedInputs:previous.inputs,reviews:previous.reviews,
@@ -193,13 +193,13 @@ $('cancel-draw').addEventListener('click',()=>{stopDrawing();message('');});
 $('import-button').addEventListener('click',()=>$('geojson-file').click());
 $('geojson-file').addEventListener('change',async event=>{const file=event.target.files[0],report=state.report;event.target.value='';if(!file)return;try{if(file.size>200000)throw new Error('Use a GeoJSON file under 200 KB.');const value=JSON.parse(await file.text());if(!value||value.type!=='FeatureCollection'||!Array.isArray(value.features))throw new Error('Import a GeoJSON FeatureCollection.');if(state.report!==report||state.controller)throw new Error('Observation changed while reading the file. Choose it again.');if(!confirmReviewReplacement())return;state.zones=value;await analyze();}catch(error){message(error.message);}});
 $('save-review').addEventListener('click',()=>{captureReviewDraft();renderZones();message('Review saved in this browser session. Export it before closing. The algorithmic findings are unchanged.');});
-$('export-button').addEventListener('click',()=>{if(!state.report)return;captureReviewDraft();const value=M.reviewExport(state.report,state.reviews);const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=element('a');link.href=url;link.download=`fieldwatch-review-${state.report.source.sha256.slice(0,12)}.json`;link.click();state.reviewsDirty=false;message('Export requested. Verify the downloaded file before leaving. Locations and human notes may be sensitive.');setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('export-button').addEventListener('click',()=>{if(!state.report)return;captureReviewDraft();const value=M.reviewExport(state.report,state.reviews);const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=element('a');link.href=url;link.download=`inundra-review-${state.report.source.sha256.slice(0,12)}.json`;link.click();state.reviewsDirty=false;message('Export requested. Verify the downloaded file before leaving. Locations and human notes may be sensitive.');setTimeout(()=>URL.revokeObjectURL(url),1000);});
 $('geojson-export-button').addEventListener('click',()=>{
   if(!state.report||state.controller)return;
   captureReviewDraft();
   const value=M.geojsonExport(state.report,state.reviews);
   const url=URL.createObjectURL(new Blob([JSON.stringify(value)],{type:'application/geo+json'}));
-  const link=element('a');link.href=url;link.download=`fieldwatch-zones-${state.report.source.sha256.slice(0,12)}.geojson`;link.click();
+  const link=element('a');link.href=url;link.download=`inundra-zones-${state.report.source.sha256.slice(0,12)}.geojson`;link.click();
   // A GIS handoff is not a restorable review backup. Keep the unsaved-note guard.
   message('GeoJSON requested for all review zones, including hidden queues. Boundaries are not water outlines; areas cover scene overlap only. Locations and notes may be sensitive. Use Export review for a restorable notes backup.');
   setTimeout(()=>URL.revokeObjectURL(url),1000);
@@ -233,8 +233,8 @@ async function init(){
   try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);let examples;try{examples=await fetchJSON('/api/examples',{signal:controller.signal});}finally{clearTimeout(timer);}
     $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.dataset.exampleId=item.id;button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',item.date));button.append(caption);button.addEventListener('click',()=>{if(!confirmReviewReplacement())return;state.example=item.id;state.lab=null;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
     if(examples.some(item=>item.available))document.querySelectorAll('.example')[examples.findIndex(item=>item.available)].click();
-    else message('The public demo has not been downloaded. Run: python scripts/fetch_fieldwatch_data.py --split demo. You can also upload your own calibrated radar.');
-  }catch(error){message('Cannot load examples. Start the FieldWatch service and reload this page.');}
+    else message('The public demo has not been downloaded. Run: python scripts/fetch_inundra_data.py --split demo. You can also upload your own calibrated radar.');
+  }catch(error){message('Cannot load examples. Start the Inundra service and reload this page.');}
 }
 function renderLab(lab,rejection=''){
   $('lab-result').hidden=false;$('lab-kind').textContent=lab.kind==='synthetic'?'SYNTHETIC CONTRACT CHECK':'REAL DATA / SELECTED REPLAY';

@@ -6,13 +6,13 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 import pytest
 
-from fieldwatch import catalog
-from fieldwatch.cli import main
-from fieldwatch.engine import InvalidRaster
-from fieldwatch.lab import synthetic_inputs
-from fieldwatch.main import app, parse_zones
-from fieldwatch.service import run_analysis
-from fieldwatch.zone_input import load_zones, MAX_JSON_DEPTH, MAX_ZONE_BYTES
+from inundra import catalog
+from inundra.cli import main
+from inundra.engine import InvalidRaster
+from inundra.lab import synthetic_inputs
+from inundra.main import app, parse_zones
+from inundra.service import run_analysis
+from inundra.zone_input import load_zones, MAX_JSON_DEPTH, MAX_ZONE_BYTES
 
 
 def document():

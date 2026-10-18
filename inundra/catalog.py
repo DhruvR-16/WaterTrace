@@ -5,9 +5,9 @@ from pathlib import Path
 import numpy as np
 import rasterio
 
-from fieldwatch.service import png
+from inundra.service import png
 
-DATA = Path(os.getenv("FIELDWATCH_DATA", str(Path(__file__).resolve().parents[1]/"data"/"fieldwatch")))
+DATA = Path(os.getenv("INUNDRA_DATA", str(Path(__file__).resolve().parents[1]/"data"/"inundra")))
 RASTERS = DATA / "data/flood_events/HandLabeled"
 EXAMPLES = [
     {"id":"india", "title":"Northeast India", "region":"India · historical flood-event imagery", "chip":"India_285297", "date":"2016-08-12", "optical_date":"2016-08-12", "orbit":77},

@@ -1,4 +1,4 @@
-# FieldWatch technical design
+# Inundra technical design
 
 ## Intended job
 
@@ -8,17 +8,17 @@ Help a cooperative or NGO reviewer separate (1) areas with water-like evidence, 
 
 | Component | Responsibility |
 |---|---|
-| `fieldwatch/engine.py` | Bounded GeoTIFF decoding, georeferencing, classification, pair alignment, polygon summaries |
-| `fieldwatch/service.py` | Source hashes, dates, trace, PNG overlays and structured reports |
-| `fieldwatch/decisions.py` | Versioned field-review gates; independent of frozen pixel classification |
-| `fieldwatch/lab.py` | Allowlisted selected replays, post-inference reference scoring, synthetic contract exercises |
-| `fieldwatch/main.py` / `limits.py` | Local API, multipart validation, admission and body limits, privacy-safe errors |
-| `fieldwatch/catalog.py` | Three allowlisted historical examples and optical previews |
-| `fieldwatch/exports.py` | Image-free GeoJSON review-zone handoff; parity-tested against the browser serializer |
-| `fieldwatch/zone_input.py` | Shared bounded web/CLI GeoJSON parsing; rejects ambiguous keys, invalid Unicode, non-finite values and excessive nesting |
-| `fieldwatch/static/` | Buildless UI, map/zone selection, drawing/import, in-memory human review and JSON/GeoJSON export |
-| `fieldwatch/cli.py` | Same analysis without a browser; private no-overwrite output |
-| `scripts/evaluate_fieldwatch.py` | Separate independent-label scoring; never imported by inference |
+| `inundra/engine.py` | Bounded GeoTIFF decoding, georeferencing, classification, pair alignment, polygon summaries |
+| `inundra/service.py` | Source hashes, dates, trace, PNG overlays and structured reports |
+| `inundra/decisions.py` | Versioned field-review gates; independent of frozen pixel classification |
+| `inundra/lab.py` | Allowlisted selected replays, post-inference reference scoring, synthetic contract exercises |
+| `inundra/main.py` / `limits.py` | Local API, multipart validation, admission and body limits, privacy-safe errors |
+| `inundra/catalog.py` | Three allowlisted historical examples and optical previews |
+| `inundra/exports.py` | Image-free GeoJSON review-zone handoff; parity-tested against the browser serializer |
+| `inundra/zone_input.py` | Shared bounded web/CLI GeoJSON parsing; rejects ambiguous keys, invalid Unicode, non-finite values and excessive nesting |
+| `inundra/static/` | Buildless UI, map/zone selection, drawing/import, in-memory human review and JSON/GeoJSON export |
+| `inundra/cli.py` | Same analysis without a browser; private no-overwrite output |
+| `scripts/evaluate_inundra.py` | Separate independent-label scoring; never imported by inference |
 
 ## Fixed v1 image policy
 
@@ -62,10 +62,10 @@ Reports and zones contain `temporal_support` under `paired-evidence-v1`; it is `
 - `GET /api/lab`: fixed cases and local availability. `POST /api/lab/{id}/run`: fixed inputs only, no body or client-supplied paths. Uses the same two-slot admission limit as analysis. Missing real data returns actionable 503; unknown IDs return 404.
 - Lab reports add `lab` metadata and optional reference/error images after inference. Synthetic expected rejections return `kind: rejection_check` without images or summaries; the browser clears old results and disables export. Standard report export strips all preview images, retaining selection disclosures and reference provenance.
 - JSON schema version `1.0`: source/reference, summary, zones, policy, trace, limitations and PNG previews. Exports omit previews. Human reviews are added only by the client and never overwrite algorithmic findings.
-- Geographic handoff schema `geojson-review-v1`: a FeatureCollection of all review boundaries in longitude/latitude, not clipped pixel coordinates or water segmentation. Exterior winding is normalized counterclockwise per [GeoJSON polygon rules](https://www.rfc-editor.org/rfc/rfc7946.html#section-3.1.6); coordinates and boundary extent are otherwise unchanged. Feature properties include scene-overlap measurements, unknown area, review gate/reasons, withheld claims, source/reference digests and dates, and separate unverified human annotations. `fieldwatch` is a foreign metadata member retaining source CRS (not a GeoJSON CRS override), policies and lab/context disclosures. Consumers may ignore foreign members and array-valued properties; preserve the full review JSON too.
+- Geographic handoff schema `geojson-review-v2`: a FeatureCollection of all review boundaries in longitude/latitude, not clipped pixel coordinates or water segmentation. Exterior winding is normalized counterclockwise per [GeoJSON polygon rules](https://www.rfc-editor.org/rfc/rfc7946.html#section-3.1.6); coordinates and boundary extent are otherwise unchanged. Feature properties include scene-overlap measurements, unknown area, review gate/reasons, withheld claims, source/reference digests and dates, and separate unverified human annotations. `inundra` is a foreign metadata member retaining source CRS (not a GeoJSON CRS override), policies and lab/context disclosures. Consumers may ignore foreign members and array-valued properties; preserve the full review JSON too.
 - `--format geojson` exposes the same handoff through the CLI, retaining private no-overwrite file creation. The default is the existing JSON report. Browser GeoJSON export captures the active draft and ignores queue filters, but does not clear the unexported-review flag: only the full JSON is accepted by **Restore notes**. GeoJSON may exceed the 200 KB polygon-import limit, and winding normalization can prevent an exact restoration-context match; keep original custom-zone inputs.
 - Version 0.5 reports add `spatial_support` to each zone, flattened into `scene_clipped`, `scene_overlap_fraction`, `scene_overlap_fraction_basis`, and `boundary_tolerance_pixels` in GeoJSON. Missing support in older reports exports as null, never assumed full coverage. The new gate policy and zone metadata intentionally prevent automatic restoration of older notes onto a changed analysis; original review files remain available for manual reconciliation.
-- Version 0.7 adds `temporal_support` at scene and zone levels. GeoJSON flattens zone temporal fields and exposes `temporal_policy`, retaining scene support in `fieldwatch` metadata. Missing/unpaired support remains null. Browser and Python export parity is tested on actual synthetic-pipeline reports. Changed zone context and `review-gates-v3` prevent silently restoring older annotations onto the new analysis; preserve old files for manual reconciliation.
+- Version 0.7 adds `temporal_support` at scene and zone levels. GeoJSON flattens zone temporal fields and exposes `temporal_policy`, retaining scene support in `inundra` metadata. Missing/unpaired support remains null. Browser and Python export parity is tested on actual synthetic-pipeline reports. Changed zone context and `review-gates-v3` prevent silently restoring older annotations onto the new analysis; preserve old files for manual reconciliation.
 - CLI publication stages complete UTF-8 output in a private same-directory temporary file, flushes/fsyncs it and exclusively hard-links the destination. A competing writer or pre-existing symlink produces exit 3; handled storage failures produce exit 2 without a partial report. Staging is removed on normal success/failure. Hard-link support is required; crash cleanup and directory-fsync/power-loss durability are not provided.
 
 ## Deliberate trade-offs

@@ -13,17 +13,17 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from fieldwatch import __version__
-from fieldwatch.catalog import examples, find_example, optical_preview, radar_path
-from fieldwatch.engine import InvalidRaster, MAX_BYTES
-from fieldwatch.limits import RequestLimits
-from fieldwatch.service import run_analysis
-from fieldwatch.lab import cases, case_by_id, run_case
-from fieldwatch.zone_input import load_zones, MAX_ZONE_BYTES
+from inundra import __version__
+from inundra.catalog import examples, find_example, optical_preview, radar_path
+from inundra.engine import InvalidRaster, MAX_BYTES
+from inundra.limits import RequestLimits
+from inundra.service import run_analysis
+from inundra.lab import cases, case_by_id, run_case
+from inundra.zone_input import load_zones, MAX_ZONE_BYTES
 
 STATIC = Path(__file__).parent / "static"
 SLOTS = BoundedSemaphore(2)
-app = FastAPI(title="FieldWatch", version=__version__, description="Satellite surface-water evidence and human inspection review. Not emergency guidance.")
+app = FastAPI(title="Inundra", version=__version__, description="Satellite surface-water evidence and human inspection review. Not emergency guidance.")
 app.add_middleware(RequestLimits)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"])
 
@@ -56,7 +56,7 @@ def index():
 
 @app.get("/api/health")
 def health():
-    return {"status":"ok", "version":__version__, "opencv":cv2.__version__, "deployment":os.getenv("FIELDWATCH_DEPLOYMENT","local"),
+    return {"status":"ok", "version":__version__, "opencv":cv2.__version__, "deployment":os.getenv("INUNDRA_DEPLOYMENT","local"),
             "demo_ready":all(item["available"] for item in examples()), "cool_verified":False}
 
 
@@ -81,7 +81,7 @@ async def analyze_lab(identifier: str, request: Request):
         try:
             return run_case(identifier)
         except FileNotFoundError:
-            raise HTTPException(503,'Download the regional replay cases: python scripts/fetch_fieldwatch_data.py --split lab') from None
+            raise HTTPException(503,'Download the regional replay cases: python scripts/fetch_inundra_data.py --split lab') from None
         except InvalidRaster as exc:
             raise HTTPException(422,str(exc)) from None
         except Exception as exc:
@@ -124,7 +124,7 @@ async def analyze_example(identifier: str, request: Request):
     if not item:
         raise HTTPException(404, "Example not found.")
     if not radar_path(item).is_file():
-        raise HTTPException(503, "Download the public demo first: python scripts/fetch_fieldwatch_data.py --split demo")
+        raise HTTPException(503, "Download the public demo first: python scripts/fetch_inundra_data.py --split demo")
     raw_body = await request.body()
     zones = parse_zones(raw_body) if raw_body else None
     def example_result():

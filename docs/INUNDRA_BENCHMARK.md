@@ -1,6 +1,6 @@
-# FieldWatch v1 benchmark
+# Inundra v1 benchmark
 
-Evaluated locally on 15 October 2026. [Machine-readable counts, case hashes and results](benchmarks/fieldwatch-v1.json).
+Evaluated locally on 15 October 2026. [Machine-readable counts, case hashes and results](benchmarks/inundra-v1.json).
 
 ## Protocol
 
@@ -17,14 +17,14 @@ Evaluated locally on 15 October 2026. [Machine-readable counts, case hashes and 
 
 | Method | Precision | Recall | IoU | Assessed fraction |
 |---|---:|---:|---:|---:|
-| FieldWatch v1 | 75.57% | 52.87% | 45.15% | 68.60% |
+| Inundra v1 | 75.57% | 52.87% | 45.15% | 68.60% |
 | VH Otsu | 25.51% | 72.17% | 23.22% | 99.64% |
 
-FieldWatch: TP 1,356,572; FP 438,521; FN 1,209,529; TN 17,512,745. Of the false negatives, 889,876 water pixels were unknown. Higher precision does not erase this recall cost.
+Inundra: TP 1,356,572; FP 438,521; FN 1,209,529; TN 17,512,745. Of the false negatives, 889,876 water pixels were unknown. Higher precision does not erase this recall cost.
 
 ## Every event
 
-| Event | Precision | Recall | FieldWatch IoU | Baseline IoU | Assessed fraction |
+| Event | Precision | Recall | Inundra IoU | Baseline IoU | Assessed fraction |
 |---|---:|---:|---:|---:|---:|
 | Ghana | 87.2% | 43.5% | 40.9% | 12.2% | 74.1% |
 | India | 94.4% | 69.1% | 66.4% | 38.8% | 82.6% |
@@ -48,8 +48,8 @@ The test data are now exposed. Further tuning must use training/validation data 
 ## Reproduce
 
 ```sh
-.venv/bin/python scripts/fetch_fieldwatch_data.py --split test
-.venv/bin/python scripts/evaluate_fieldwatch.py --split test --output artifacts/reproduction.json
+.venv/bin/python scripts/fetch_inundra_data.py --split test
+.venv/bin/python scripts/evaluate_inundra.py --split test --output artifacts/reproduction.json
 ```
 
 Compare counts and input hashes with the tracked JSON. Elapsed time is not a correctness assertion. Missing files or label-grid mismatch fail the evaluator; rejection by the inference admission rules is counted explicitly. Downloads and raw labels are not committed.

@@ -42,7 +42,7 @@ def main():
         recovered.raise_for_status()
         assert recovered.json()['zones'][0]['name']=='खेत 🌾'
         assert client.get('/api/health',headers={'Host':'untrusted.example'}).status_code==400
-    print('FieldWatch HTTP smoke passed: raster decoding, malformed-input recovery, Unicode and host bounds.')
+    print('Inundra HTTP smoke passed: raster decoding, malformed-input recovery, Unicode and host bounds.')
 
 
 if __name__=='__main__':main()

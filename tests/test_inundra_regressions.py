@@ -6,11 +6,11 @@ import pytest
 from affine import Affine
 from fastapi.testclient import TestClient
 
-from fieldwatch import catalog
-from fieldwatch.engine import InvalidRaster, default_zones, read_raster
-from fieldwatch.lab import encode, synthetic_inputs
-from fieldwatch.main import app
-from fieldwatch.service import run_analysis
+from inundra import catalog
+from inundra.engine import InvalidRaster, default_zones, read_raster
+from inundra.lab import encode, synthetic_inputs
+from inundra.main import app
+from inundra.service import run_analysis
 
 
 @pytest.mark.parametrize('origin', ['http://[', 'null', 'https://testserver', 'http://testserver/path', 'http://user@testserver'])
@@ -91,7 +91,7 @@ def test_corrupt_optional_optical_does_not_discard_valid_radar(tmp_path,monkeypa
 
 
 def test_cli_null_zones_do_not_create_demo_report(tmp_path):
-    from fieldwatch.cli import main
+    from inundra.cli import main
     raw,_=synthetic_inputs('new-water')
     source=tmp_path/'radar.tif';source.write_bytes(raw)
     zones=tmp_path/'zones.json';zones.write_text('null')

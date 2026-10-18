@@ -49,6 +49,8 @@ logs/
 *.db
 tmp/
 temp/
+.inundra-*.tmp
+# Preserve protection for staging files left by pre-rename versions.
 .fieldwatch-*.tmp
 
 # Editor and operating-system files

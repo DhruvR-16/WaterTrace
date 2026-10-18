@@ -5,11 +5,11 @@ import pytest
 from fastapi.testclient import TestClient
 from rasterio.io import MemoryFile
 
-from fieldwatch import catalog
-from fieldwatch.engine import InvalidRaster, read_raster
-from fieldwatch.lab import CASES, run_case, score_labels, synthetic_inputs
-from fieldwatch.main import app
-from fieldwatch.decisions import review_decision
+from inundra import catalog
+from inundra.engine import InvalidRaster, read_raster
+from inundra.lab import CASES, run_case, score_labels, synthetic_inputs
+from inundra.main import app
+from inundra.decisions import review_decision
 
 
 SYNTHETIC=[item['id'] for item in CASES if item['kind']=='synthetic']

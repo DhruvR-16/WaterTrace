@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import numpy as np
 import rasterio
-from fieldwatch.engine import POLICY, InvalidRaster, classify, otsu_db, read_raster
+from inundra.engine import POLICY, InvalidRaster, classify, otsu_db, read_raster
 
 
 def metrics(prediction, truth, assessed):
@@ -62,9 +62,9 @@ def evaluate(data, split):
             baseline = baseline_valid = np.zeros(truth.shape, bool)
         records.append({"image":image, "sha256":hashlib.sha256(raw).hexdigest(), "event":image.split("_")[0],
                         "rejection":rejection,
-                        "fieldwatch":metrics(classes==2,truth,classes!=0), "vh_otsu":metrics(baseline,truth,baseline_valid)})
+                        "inundra":metrics(classes==2,truth,classes!=0), "vh_otsu":metrics(baseline,truth,baseline_valid)})
     def summary(rows):
-        return {method:rates({key:sum(r[method][key] for r in rows) for key in rows[0][method]}) for method in ("fieldwatch","vh_otsu")}
+        return {method:rates({key:sum(r[method][key] for r in rows) for key in rows[0][method]}) for method in ("inundra","vh_otsu")}
     return {"policy":POLICY, "split":split, "chips":len(records), "rejected_chips":sum(r["rejection"] is not None for r in records), "scope":"Water/no-water labels, not flood onset, agricultural impact, or inspection success.",
             "protocol":"NoData truth excluded only during scoring. Unknown predictions count as negatives in full recall/IoU. Rejected scenes are entirely unknown for both methods and remain in scoring. Baseline is unfiltered VH Otsu under the same input-admission policy.",
             "manifest_sha256":hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
@@ -75,7 +75,7 @@ def evaluate(data, split):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--split", choices=["demo","valid","test"], default="test")
-    parser.add_argument("--data", type=Path, default=ROOT/"data/fieldwatch")
+    parser.add_argument("--data", type=Path, default=ROOT/"data/inundra")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     report = evaluate(args.data, args.split)

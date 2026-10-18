@@ -6,8 +6,8 @@ import time
 import cv2
 import numpy as np
 
-from fieldwatch.engine import POLICY, InvalidRaster, classify, compare, geographic_bounds, pixel_areas, read_raster, summarize_zones, temporal_summary
-from fieldwatch.decisions import review_decision
+from inundra.engine import POLICY, InvalidRaster, classify, compare, geographic_bounds, pixel_areas, read_raster, summarize_zones, temporal_summary
+from inundra.decisions import review_decision
 
 
 def png(array):
@@ -76,7 +76,7 @@ def run_analysis(raw, *, name="Radar scene", observed_on=None, reference_raw=Non
                "inspect_water": sum(r["status"] == "inspect_water" for r in rows),
                "resolve_uncertainty": sum(r["status"] == "resolve_uncertainty" for r in rows),
                "no_signal": sum(r["status"] == "no_signal" for r in rows)}
-    result = {"schema_version": "1.0", "engine": {"name": "FieldWatch", "policy": POLICY, "opencv": cv2.__version__, "cool_verified": False},
+    result = {"schema_version": "1.0", "engine": {"name": "Inundra", "policy": POLICY, "opencv": cv2.__version__, "cool_verified": False},
               "generated_at": datetime.now(timezone.utc).isoformat(), "name": str(name)[:120],
               "source": {"sha256": raster.sha256, "observed_on": observed_on, "bounds": bounds,
                          "width": raster.dimensions[1], "height": raster.dimensions[0], "crs": str(raster.crs),
