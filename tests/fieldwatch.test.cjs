@@ -114,7 +114,7 @@ async function reviewUI(){
   await new Promise(resolve=>setImmediate(resolve));
   const report=reviewFixture();report.source.width=64;
   report.zones=['a','b'].map(id=>({id,status:'inspect_water',name:id,crop:'rice',reasons:[],coverage:1,water_fraction:.5,
-    area_ha:1,water_observed_ha:.5,new_water_candidate_ha:null,geometry:{type:'Polygon',coordinates:[]}}));
+    area_ha:1,water_observed_ha:.5,new_water_candidate_ha:null,geometry:{type:'Polygon',coordinates:[[[0,0],[1,0],[1,1],[0,0]]]}}));
   context.fixture=report;
   vm.runInContext("state.report=fixture;state.selected='a';state.example='original';",context);
   get('review-outcome').value='unreviewed';
@@ -157,4 +157,52 @@ test('failed restore leaves current draft and saved notes untouched',async()=>{
   await ui.get('review-file').listeners.change({target:{files:[{size:1000,text:async()=>JSON.stringify(exported)}],value:'selected'}});
   assert.equal(ui.get('review-note').value,'Current draft');assert.equal(ui.run('Object.keys(state.reviews).length'),0);
   assert.match(ui.get('message').textContent,/does not match/);
+});
+test('GeoJSON exports geographic boundaries, provenance and separate human annotations',()=>{
+  const report=reviewFixture();report.zone_basis='illustrative grid';report.lab={kind:'synthetic',notice:'Not real satellite imagery'};
+  report.zones[0].pixel_geometry={type:'Polygon',coordinates:[[[0,0],[64,0],[64,64],[0,0]]]};
+  report.zones[0].decision={level:'insufficient_evidence',withheld_claims:['crop damage'],policy:'gates-v1'};
+  const before=JSON.stringify(report),exported=model.geojsonExport(report,{a:savedReview,b:{note:'unrelated'}});
+  const feature=exported.features[0];
+  assert.deepEqual(feature.geometry,report.zones[0].geometry);
+  assert.equal(feature.properties.review_gate,'insufficient_evidence');
+  assert.equal(feature.properties.human_note,savedReview.note);assert.equal(feature.properties.human_review_unverified,true);
+  assert.equal(feature.properties.source_sha256,report.source.sha256);assert.deepEqual(exported.fieldwatch.lab,report.lab);
+  assert.equal(exported.features.length,1);assert.equal(JSON.stringify(exported).includes('pixel_geometry'),false);
+  assert.equal(JSON.stringify(exported).includes('pixels'),true); // Pixel count is a scalar, not a pixel payload.
+  assert.equal(exported.images,undefined);assert.equal(JSON.stringify(report),before);
+  feature.geometry.coordinates[0][0][0]=55;feature.properties.withheld_claims.push('modified');
+  exported.fieldwatch.source.sha256='modified';assert.equal(JSON.stringify(report),before);
+});
+test('GeoJSON preserves absent comparison and date as null rather than zero',()=>{
+  const report=reviewFixture();report.reference=null;report.source.observed_on=null;
+  const props=model.geojsonExport(report).features[0].properties;
+  for(const field of ['new_water_candidate_ha','repeat_water_observed_ha','reference_sha256','reference_on','observed_on','human_note'])assert.equal(props[field],null);
+  assert.match(props.area_notice,/scene overlap/);assert.match(props.area_notice,/Zones may overlap/);
+});
+test('GeoJSON prototype-looking IDs do not pick up inherited human notes',()=>{
+  const report=reviewFixture();report.zones[0].id='__proto__';
+  assert.equal(model.geojsonExport(report).features[0].properties.human_note,null);
+  assert.equal(model.geojsonExport(report,{['__proto__']:savedReview}).features[0].properties.human_note,savedReview.note);
+});
+test('GeoJSON normalizes clockwise exteriors without changing the input boundary',()=>{
+  const report=reviewFixture();report.zones[0].geometry.coordinates[0].reverse();
+  const before=JSON.stringify(report),exported=model.geojsonExport(report);
+  assert.deepEqual(exported.features[0].geometry.coordinates[0],[[0,0],[1,0],[1,1],[0,0]]);
+  assert.equal(JSON.stringify(report),before);
+});
+test('GeoJSON includes all queues and draft notes but keeps the backup warning',async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Pending handoff';
+  ui.run("state.filter='resolve_uncertainty'");ui.get('geojson-export-button').click();
+  const exported=JSON.parse(await ui.captured.blob.text());
+  assert.equal(ui.captured.blob.type,'application/geo+json');assert.equal(exported.features.length,2);
+  assert.equal(exported.features[0].properties.human_note,'Pending handoff');
+  assert.equal(ui.run('state.reviewsDirty'),true);assert.equal(ui.run('state.report===fixture'),true);
+  assert.match(ui.get('message').textContent,/Use Export review/);
+  assert.throws(()=>model.restoreReviews(ui.run('state.report'),exported),/review export/);
+});
+test('GeoJSON control produces nothing while a request is pending or no report exists',async()=>{
+  const ui=await reviewUI();ui.run('state.controller={}');ui.get('geojson-export-button').click();
+  assert.equal(ui.captured.blob,null);
+  ui.run('state.controller=null;state.report=null');ui.get('geojson-export-button').click();assert.equal(ui.captured.blob,null);
 });

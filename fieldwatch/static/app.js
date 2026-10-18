@@ -10,7 +10,7 @@ function svgElement(tag,attrs) {const el=document.createElementNS('http://www.w3
 function message(text) {$('message').textContent=text;$('message').hidden=!text;}
 function busy(active) {
   $('busy').hidden=!active;
-  document.querySelectorAll('.example,.lab-card,#upload-button,#export-button,#restore-button,#draw-button,#import-button').forEach(el=>el.disabled=active || (['export-button','restore-button','draw-button','import-button'].includes(el.id)&&!state.report));
+  document.querySelectorAll('.example,.lab-card,#upload-button,#export-button,#geojson-export-button,#restore-button,#draw-button,#import-button').forEach(el=>el.disabled=active || (['export-button','geojson-export-button','restore-button','draw-button','import-button'].includes(el.id)&&!state.report));
   $('draw-button').disabled=active || !!state.lab || !state.report || state.report.source.crs!=='EPSG:4326';
   $('import-button').disabled=active || !!state.lab || !state.report;
 }
@@ -167,6 +167,16 @@ $('import-button').addEventListener('click',()=>$('geojson-file').click());
 $('geojson-file').addEventListener('change',async event=>{const file=event.target.files[0],report=state.report;event.target.value='';if(!file)return;try{if(file.size>200000)throw new Error('Use a GeoJSON file under 200 KB.');const value=JSON.parse(await file.text());if(!value||value.type!=='FeatureCollection'||!Array.isArray(value.features))throw new Error('Import a GeoJSON FeatureCollection.');if(state.report!==report||state.controller)throw new Error('Observation changed while reading the file. Choose it again.');if(!confirmReviewReplacement())return;state.zones=value;await analyze();}catch(error){message(error.message);}});
 $('save-review').addEventListener('click',()=>{captureReviewDraft();renderZones();message('Review saved in this browser session. Export it before closing. The algorithmic findings are unchanged.');});
 $('export-button').addEventListener('click',()=>{if(!state.report)return;captureReviewDraft();const value=M.reviewExport(state.report,state.reviews);const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=element('a');link.href=url;link.download=`fieldwatch-review-${state.report.source.sha256.slice(0,12)}.json`;link.click();state.reviewsDirty=false;message('Export requested. Verify the downloaded file before leaving. Locations and human notes may be sensitive.');setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('geojson-export-button').addEventListener('click',()=>{
+  if(!state.report||state.controller)return;
+  captureReviewDraft();
+  const value=M.geojsonExport(state.report,state.reviews);
+  const url=URL.createObjectURL(new Blob([JSON.stringify(value)],{type:'application/geo+json'}));
+  const link=element('a');link.href=url;link.download=`fieldwatch-zones-${state.report.source.sha256.slice(0,12)}.geojson`;link.click();
+  // A GIS handoff is not a restorable review backup. Keep the unsaved-note guard.
+  message('GeoJSON requested for all review zones, including hidden queues. Boundaries are not water outlines; areas cover scene overlap only. Locations and notes may be sensitive. Use Export review for a restorable notes backup.');
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
 $('restore-button').addEventListener('click',()=>$('review-file').click());
 $('review-file').addEventListener('change',async event=>{
   const file=event.target.files[0],report=state.report;event.target.value='';if(!file||!report)return;

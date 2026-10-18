@@ -20,6 +20,35 @@
   function reviewChanged(existing, outcome, note) {
     return (existing?.outcome || 'unreviewed')!==outcome || (existing?.note || '')!==note;
   }
+  function geojsonExport(report, reviews={}) {
+    const features=report.zones.map(zone=>{
+      const decision=zone.decision||{},review=Object.hasOwn(reviews,zone.id)?reviews[zone.id]:{};
+      const properties=Object.fromEntries(['id','name','crop','water_observed_ha','uncertain_ha',
+        'no_water_detected_ha','water_fraction','pixels','new_water_candidate_ha','repeat_water_observed_ha'].map(k=>[k,zone[k]??null]));
+      Object.assign(properties,{
+        review_queue:zone.status??null,scene_overlap_ha:zone.area_ha??null,assessed_fraction:zone.coverage??null,
+        geometry_role:'review_zone_boundary_not_water_mask',area_scope:'scene_overlap_pixel_centers',
+        area_notice:'Measurements cover only scene overlap, not necessarily the full boundary. Zones may overlap; do not sum as unique affected land.',
+        zone_basis:report.zone_basis??null,review_gate:decision.level??null,review_next_step:decision.next_step??null,
+        review_reasons:decision.reasons??[],signal_reasons:zone.reasons??[],withheld_claims:decision.withheld_claims??[],
+        decision_policy:decision.policy??null,pixel_policy:report.engine.policy,
+        source_sha256:report.source.sha256,observed_on:report.source.observed_on??null,
+        reference_sha256:report.reference?.sha256??null,reference_on:report.reference?.observed_on??null,
+        human_outcome:review?.outcome??null,human_note:review?.note??null,human_recorded_at:review?.recorded_at??null,
+        human_review_unverified:true,
+      });
+      const ring=zone.geometry.coordinates[0],[x,y]=ring[0];
+      // Translate first so tiny lon/lat polygons do not lose winding precision.
+      const signedArea=ring.slice(0,-1).reduce((sum,a,i)=>{const b=ring[i+1];return sum+(a[0]-x)*(b[1]-y)-(b[0]-x)*(a[1]-y);},0);
+      const geometry={type:'Polygon',coordinates:[signedArea<0?[...ring].reverse():ring]};
+      return {type:'Feature',id:zone.id,geometry,properties};
+    });
+    const metadata=Object.fromEntries(['source','reference','engine','policy','reference_policy','zone_basis','limitations','lab','context'].map(k=>[k,report[k]??null]));
+    Object.assign(metadata,{schema_version:'geojson-review-v1',geometry_role:'review_zone_boundaries_not_water_segmentation',
+      area_scope:'scene_overlap_pixel_centers',
+      review_notice:'Human annotations are unverified, not algorithmic findings. Locations and notes may be sensitive. Use the full review JSON to restore notes.'});
+    return JSON.parse(JSON.stringify({type:'FeatureCollection',fieldwatch:metadata,features}));
+  }
   function canonical(value, depth=0) {
     if(depth>32)throw new Error('Review export is too deeply nested.');
     if(Array.isArray(value))return value.map(v=>canonical(v,depth+1));
@@ -59,7 +88,7 @@
     while(taken.has('drawn-'+index))index++;
     return {type:'Feature',properties:{id:'drawn-'+index,name:'Drawn review zone '+index,crop:'unknown'},geometry:{type:'Polygon',coordinates:[ring]}};
   }
-  const api={statuses,areaLabel,validateResult,reviewExport,reviewChanged,restoreReviews,pixelToGeo,featureFromPoints};
+  const api={statuses,areaLabel,validateResult,reviewExport,geojsonExport,reviewChanged,restoreReviews,pixelToGeo,featureFromPoints};
   if (typeof module !== 'undefined' && module.exports) module.exports=api;
   else root.FieldWatchModel=api;
 })(typeof window !== 'undefined' ? window : globalThis);
