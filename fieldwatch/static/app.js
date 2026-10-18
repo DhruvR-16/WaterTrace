@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const M = window.FieldWatchModel;
-const state = {report:null,example:null,lab:null,upload:null,zones:null,reviews:Object.create(null),reviewsDirty:false,selected:null,filter:'all',controller:null,drawing:false,points:[]};
+const state = {report:null,acceptedInputs:null,pendingReview:null,example:null,lab:null,upload:null,zones:null,reviews:Object.create(null),reviewsDirty:false,selected:null,filter:'all',controller:null,drawing:false,points:[]};
 const number = value => new Intl.NumberFormat('en',{maximumFractionDigits:1}).format(value);
 const percent = value => `${Math.round(value*100)}%`;
 const metricPercent = value => value===null?'N/A':`${(value*100).toFixed(1)}%`;
@@ -15,7 +15,7 @@ function busy(active) {
   $('import-button').disabled=active || !!state.lab || !state.report;
 }
 function clearReport() {
-  state.report=null;state.selected=null;state.reviews=Object.create(null);state.reviewsDirty=false;state.filter='all';
+  state.report=null;state.acceptedInputs=null;state.selected=null;state.reviews=Object.create(null);state.reviewsDirty=false;state.filter='all';
   $('lab-result').hidden=true;$('lab-legend').hidden=true;$('normal-legend').hidden=false;
   ['water-value','unknown-value','coverage-value','date-value'].forEach(id=>$(id).textContent='—');
   $('map-stack').hidden=true;$('map-placeholder').hidden=false;$('zone-detail').hidden=true;
@@ -33,9 +33,14 @@ async function fetchJSON(url, options={}) {
 }
 async function analyze() {
   if(state.controller)return;
+  captureReviewDraft();
+  const previous=state.report?{report:state.report,inputs:state.acceptedInputs,reviews:state.reviews,
+    reviewsDirty:state.reviewsDirty,selected:state.selected,filter:state.filter,view:$('view-select').value}:null;
+  const inputs={example:state.example,lab:state.lab,upload:state.upload,zones:state.zones};
+  state.pendingReview=previous;
   stopDrawing();message('');clearReport();busy(true);
   const controller=new AbortController();state.controller=controller;
-  let timedOut=false;
+  let timedOut=false,rendering=false;
   const timer=setTimeout(()=>{timedOut=true;controller.abort();},90000);
   try {
     let result;
@@ -50,7 +55,7 @@ async function analyze() {
       if(state.zones)form.append('zones',JSON.stringify(state.zones));
       result=await fetchJSON('/api/analyze',{method:'POST',body:form,signal:controller.signal});
     }
-    if(controller.signal.aborted)return;
+    if(controller.signal.aborted)throw new Error('Request stopped before acceptance.');
     if(state.lab&&result.kind==='rejection_check'){
       renderLab(result.lab,result.observed_rejection);$('scene-title').textContent='Input rejected — no map produced';
       $('scene-tag').textContent='SYNTHETIC TEST';$('region-code').textContent='EVIDENCE LAB';$('source-caption').textContent='Rejected test input';
@@ -58,11 +63,24 @@ async function analyze() {
       $('map-caption').textContent='Synthetic rejection exercise. No measured scene summary or field conclusion is available.';
       return;
     }
-    state.report=M.validateResult(result);state.selected=result.zones[0]?.id;render();
+    state.report=M.validateResult(result);state.selected=result.zones[0]?.id;rendering=true;render();state.acceptedInputs=inputs;
   }catch(error){
-    message(controller.signal.aborted?(timedOut?'Analysis timed out. The server may still finish; choose an example or submit again to retry.':'Stopped waiting. The server may still finish. No result has been accepted.'):error instanceof TypeError?'Cannot reach the local service. Start FieldWatch and retry.':error.message);
-    $('zone-list').replaceChildren(element('p','No result. Retry an example or upload.','empty'));
-  }finally{clearTimeout(timer);state.controller=null;busy(false);}
+    const reason=controller.signal.aborted?(timedOut?'Analysis timed out. The server may still finish.':'Stopped waiting. The server may still finish.'):rendering?'The response could not be displayed.':error instanceof TypeError?'Cannot reach the local service. Start FieldWatch and retry.':error.message;
+    clearReport();
+    if(previous){
+      Object.assign(state,previous.inputs,{report:previous.report,acceptedInputs:previous.inputs,reviews:previous.reviews,
+        reviewsDirty:previous.reviewsDirty,selected:previous.selected,filter:previous.filter});
+      document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.exampleId===state.example)));
+      render();
+      if(state.report.images[previous.view]){$('view-select').value=previous.view;renderView();}
+      $('scene-tag').textContent='PREVIOUS RESULT';
+      message(`${reason} The new result was not accepted. Previous observation and session notes restored; export them before leaving.`);
+    }else{
+      $('scene-title').textContent='No accepted analysis';$('source-caption').textContent='No result';
+      $('zone-list').replaceChildren(element('p','No result. Retry an example or upload.','empty'));
+      message(reason);
+    }
+  }finally{clearTimeout(timer);state.controller=null;state.pendingReview=null;busy(false);}
 }
 function render() {
   const r=state.report;
@@ -125,19 +143,20 @@ function renderZones() {
   if(state.points.length)svg.append(svgElement('polygon',{points:state.points.map(p=>p.join(',')).join(' '),class:'draft'}));
 }
 function captureReviewDraft(){
-  if(!state.report || !state.selected)return;
+  if(!state.report || state.selected==null)return;
   const outcome=$('review-outcome').value,note=$('review-note').value.slice(0,1000);
   if(M.reviewChanged(state.reviews[state.selected],outcome,note)){
     state.reviews[state.selected]={outcome,note,recorded_at:new Date().toISOString()};state.reviewsDirty=true;
   }
 }
-function confirmReviewReplacement(){
+function confirmReviewReplacement(action='analysis'){
   if(state.controller)return false;
   captureReviewDraft();
-  return !state.reviewsDirty || window.confirm('This will clear unexported session notes, even if the next analysis fails. Cancel to export them first. Continue?');
+  return !state.reviewsDirty || window.confirm(action==='notes'?'Replace unexported session notes with this file? Cancel to export them first.':
+    'A completed analysis or lab check will clear unexported notes. If the request fails or is cancelled, the previous review will be restored. Cancel to export first. Continue?');
 }
 window.addEventListener('beforeunload',event=>{
-  captureReviewDraft();if(state.reviewsDirty){event.preventDefault();event.returnValue='';}
+  captureReviewDraft();if(state.reviewsDirty||state.pendingReview?.reviewsDirty){event.preventDefault();event.returnValue='';}
 });
 function selectZone(id){captureReviewDraft();state.selected=id;renderZones();renderDetail();}
 function renderDetail(){
@@ -186,7 +205,7 @@ $('review-file').addEventListener('change',async event=>{
     const value=JSON.parse(await file.text());
     if(state.report!==report||state.controller)throw new Error('Observation changed while reading the file. Choose it again.');
     const reviews=M.restoreReviews(report,value);
-    if(!confirmReviewReplacement())return;
+    if(!confirmReviewReplacement('notes'))return;
     state.reviews=reviews;state.reviewsDirty=false;renderZones();renderDetail();
     message(`Restored ${Object.keys(reviews).length} human reviews locally. These are unverified annotations, not authenticated findings. Measurements are unchanged.`);
   }catch(error){message(error.message);}
@@ -205,7 +224,7 @@ $('upload-form').addEventListener('submit',event=>{event.preventDefault();const 
 });
 async function init(){
   try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);let examples;try{examples=await fetchJSON('/api/examples',{signal:controller.signal});}finally{clearTimeout(timer);}
-    $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',item.date));button.append(caption);button.addEventListener('click',()=>{if(!confirmReviewReplacement())return;state.example=item.id;state.lab=null;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
+    $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.dataset.exampleId=item.id;button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',item.date));button.append(caption);button.addEventListener('click',()=>{if(!confirmReviewReplacement())return;state.example=item.id;state.lab=null;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
     if(examples.some(item=>item.available))document.querySelectorAll('.example')[examples.findIndex(item=>item.available)].click();
     else message('The public demo has not been downloaded. Run: python scripts/fetch_fieldwatch_data.py --split demo. You can also upload your own calibrated radar.');
   }catch(error){message('Cannot load examples. Start the FieldWatch service and reload this page.');}

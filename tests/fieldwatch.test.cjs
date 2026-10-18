@@ -95,29 +95,33 @@ test('prototype-looking IDs and markup remain inert annotation strings',()=>{
 async function reviewUI(){
   const vm=require('node:vm'),fs=require('node:fs');
   class Element {
-    constructor(){this.value='';this.children=[];this.listeners={};this.dataset={};this.style={setProperty(){}};this.classList={add(){},remove(){}};}
+    constructor(){this.value='';this.children=[];this.listeners={};this.dataset={};this.attributes={};this.style={setProperty(){}};this.classList={add(){},remove(){}};}
     addEventListener(name,fn){this.listeners[name]=fn;}
-    setAttribute(){}
+    setAttribute(name,value){this.attributes[name]=value;}
     append(...items){this.children.push(...items);}
     replaceChildren(...items){this.children=items;}
     click(){return this.listeners.click?.();}
   }
-  const elements=new Map(),events={},captured={confirm:false,confirmCalls:0,blob:null};
-  const get=id=>{if(!elements.has(id))elements.set(id,new Element());return elements.get(id);};
-  const document={getElementById:get,querySelectorAll:()=>[],createElement:()=>new Element(),createElementNS:()=>new Element(),createTextNode:text=>text};
+  const elements=new Map(),events={},captured={confirm:false,confirmCalls:0,blob:null,timers:[]};
+  const get=id=>{if(!elements.has(id)){const item=new Element();item.id=id;elements.set(id,item);}return elements.get(id);};
+  const query=selector=>selector.split(',').flatMap(s=>s.startsWith('#')?[get(s.slice(1))]:s==='.example'?get('examples').children:s==='.lab-card'?get('lab-cases').children:[]);
+  const document={getElementById:get,querySelectorAll:query,createElement:()=>new Element(),createElementNS:()=>new Element(),createTextNode:text=>text};
   const context=vm.createContext({document,window:{FieldWatchModel:model,addEventListener:(n,f)=>events[n]=f,
     confirm:()=>{captured.confirmCalls++;return captured.confirm;}},
     fetch:async()=>({ok:true,json:async()=>[{id:'india',title:'India',date:'2020-01-10',available:false}]}),
-    AbortController,AbortSignal,Blob,URL:{createObjectURL:blob=>{captured.blob=blob;return 'blob:test';},revokeObjectURL(){}},
-    setTimeout:()=>0,clearTimeout(){}});
+    AbortController,AbortSignal,Blob,FormData,URL:{createObjectURL:blob=>{captured.blob=blob;return 'blob:test';},revokeObjectURL(){}},
+    setTimeout:(fn,ms)=>{captured.timers.push({fn,ms});return captured.timers.length;},clearTimeout(){}});
   vm.runInContext(fs.readFileSync(require.resolve('../fieldwatch/static/app.js'),'utf8'),context);
   await new Promise(resolve=>setImmediate(resolve));
-  const report=reviewFixture();report.source.width=64;
+  const report=reviewFixture();Object.assign(report.source,{width:64,height:64,bounds:[0,0,1,1],transform:[.01,0,0,0,-.01,1]});
+  Object.assign(report,{name:'Original observation',zone_basis:'test zones',summary:{water_observed_ha:1,uncertain_ha:0,assessed_fraction:1},trace:[],elapsed_ms:1,images:{radar:'data:image/png;base64,AA==',evidence:'data:image/png;base64,AA=='}});
   report.zones=['a','b'].map(id=>({id,status:'inspect_water',name:id,crop:'rice',reasons:[],coverage:1,water_fraction:.5,
-    area_ha:1,water_observed_ha:.5,new_water_candidate_ha:null,geometry:{type:'Polygon',coordinates:[[[0,0],[1,0],[1,1],[0,0]]]}}));
+    area_ha:1,water_observed_ha:.5,new_water_candidate_ha:null,geometry:{type:'Polygon',coordinates:[[[0,0],[1,0],[1,1],[0,0]]]},pixel_geometry:{type:'Polygon',coordinates:[[[0,0],[64,0],[64,64],[0,0]]]}}));
   context.fixture=report;
-  vm.runInContext("state.report=fixture;state.selected='a';state.example='original';",context);
+  vm.runInContext("state.report=fixture;state.selected='a';state.example='original';state.acceptedInputs={example:'original',lab:null,upload:null,zones:null};",context);
   get('review-outcome').value='unreviewed';
+  get('view-select').options=['radar','optical','earlier','errors','reference_labels'].map(value=>({value}));
+  get('view-select').value='radar';get('zones-toggle').checked=true;
   return {get,context,events,captured,run:code=>vm.runInContext(code,context)};
 }
 test('zone selection keeps an unsaved draft and restores it when returning',async()=>{
@@ -231,4 +235,115 @@ test('new spatial support must match before old review notes can be restored',()
   const report=reviewFixture(),saved=model.reviewExport(report,{a:savedReview});
   const current=JSON.parse(JSON.stringify(report));current.zones[0].spatial_support={scene_clipped:true};
   assert.throws(()=>model.restoreReviews(current,saved),/does not match/);
+});
+
+for(const mode of ['server rejection','network failure','invalid response','render failure'])test(`${mode} restores the previous observation, selection and draft`,async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Keep this draft';
+  ui.run("state.filter='inspect_water';state.example='replacement';state.zones={type:'FeatureCollection',features:[]}");
+  if(mode==='server rejection')ui.context.fetch=async()=>({ok:false,json:async()=>({detail:'Invalid zone polygon.'})});
+  if(mode==='network failure')ui.run("fetch=async()=>{throw new TypeError('offline')}");
+  if(mode==='invalid response')ui.context.fetch=async()=>({ok:true,json:async()=>({bad:'response'})});
+  if(mode==='render failure'){
+    const broken=JSON.parse(JSON.stringify(ui.context.fixture));delete broken.source.bounds;
+    ui.context.fetch=async()=>({ok:true,json:async()=>broken});
+  }
+  await ui.run('analyze()');
+  assert.equal(ui.run('state.report===fixture'),true);assert.equal(ui.run('state.example'),'original');
+  assert.equal(ui.run('state.zones'),null);assert.equal(ui.run('state.selected'),'a');
+  assert.equal(ui.run('state.filter'),'inspect_water');assert.equal(ui.run('state.reviewsDirty'),true);
+  assert.equal(ui.get('review-note').value,'Keep this draft');assert.equal(ui.get('scene-tag').textContent,'PREVIOUS RESULT');
+  assert.match(ui.get('message').textContent,/Previous observation and session notes restored/);
+  if(mode==='render failure')assert.match(ui.get('message').textContent,/response could not be displayed/);
+  assert.equal(ui.get('export-button').disabled,false);assert.equal(ui.run('state.pendingReview'),null);
+  ui.get('export-button').click();
+  const exported=JSON.parse(await ui.captured.blob.text());
+  assert.equal(exported.name,'Original observation');assert.equal(exported.human_reviews[0].note,'Keep this draft');
+});
+
+for(const mode of ['cancel','timeout'])test(`${mode} restores pending review and ignores a late successful response`,async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Unsaved during request';
+  let finish;ui.context.fetch=()=>new Promise(resolve=>{finish=resolve;});
+  const pending=ui.run("state.example='replacement';analyze()");
+  assert.equal(ui.get('export-button').disabled,true);assert.equal(ui.get('map-stack').hidden,true);
+  let prevented=false;ui.events.beforeunload({preventDefault(){prevented=true;}});assert.equal(prevented,true);
+  if(mode==='cancel')ui.get('cancel-button').click();
+  else ui.captured.timers.find(t=>t.ms===90000).fn();
+  const incoming=JSON.parse(JSON.stringify(ui.context.fixture));incoming.name='Late result';
+  finish({ok:true,json:async()=>incoming});await pending;
+  assert.equal(ui.run('state.report===fixture'),true);assert.equal(ui.get('review-note').value,'Unsaved during request');
+  assert.equal(ui.run('state.controller'),null);assert.equal(ui.run('state.pendingReview'),null);
+  assert.match(ui.get('message').textContent,mode==='cancel'?/Stopped waiting/:/timed out/);
+});
+
+test('failed imported polygons restore original inputs and highlighted example',async()=>{
+  const ui=await reviewUI();ui.captured.confirm=true;ui.get('review-note').value='Prior annotation';
+  ui.run("state.example='india';state.acceptedInputs.example='india';state.acceptedInputs.zones={type:'FeatureCollection',features:[{original:true}]};state.zones=state.acceptedInputs.zones");
+  ui.context.fetch=async()=>({ok:false,json:async()=>({detail:'Unsupported polygon.'})});
+  await ui.get('geojson-file').listeners.change({target:{value:'chosen',files:[{size:100,text:async()=>'{"type":"FeatureCollection","features":[]}'}]}});
+  assert.equal(ui.run('state.zones.features[0].original'),true);
+  assert.equal(ui.get('examples').children[0].attributes['aria-pressed'],'true');
+  assert.equal(ui.get('review-note').value,'Prior annotation');
+});
+
+test('failed replacement of an uploaded scene retains the original file references',async()=>{
+  const ui=await reviewUI();ui.context.originalUpload={current:new Blob(['radar']),reference:new Blob(['earlier']),date:'2020-01-10',referenceDate:'2020-01-01',sameOrbit:true};
+  ui.run("state.example=null;state.upload=originalUpload;state.acceptedInputs={example:null,lab:null,upload:originalUpload,zones:null};state.example='replacement';state.upload=null");
+  ui.context.fetch=async()=>({ok:false,json:async()=>({detail:'Rejected.'})});
+  await ui.run('analyze()');
+  assert.equal(ui.run('state.upload===originalUpload'),true);assert.equal(ui.run('state.example'),null);
+});
+
+test('a successful replacement commits new inputs and releases the previous review',async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Replaced with confirmation';
+  const incoming=JSON.parse(JSON.stringify(ui.context.fixture));incoming.name='New observation';incoming.source.sha256='b'.repeat(64);
+  ui.context.fetch=async()=>({ok:true,json:async()=>incoming});
+  await ui.run("state.example='replacement';analyze()");
+  assert.equal(ui.run('state.report.name'),'New observation');assert.equal(ui.run('state.acceptedInputs.example'),'replacement');
+  assert.equal(ui.run('state.reviewsDirty'),false);assert.equal(ui.run('Object.keys(state.reviews).length'),0);
+  assert.equal(ui.run('state.pendingReview'),null);assert.equal(ui.get('review-note').value,'');
+  assert.notEqual(ui.get('scene-tag').textContent,'PREVIOUS RESULT');
+});
+
+test('an accepted lab rejection clears old evidence rather than showing a stale map',async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Prior draft';
+  const lab={kind:'synthetic',title:'Shifted grid',question:'Reject?',notice:'Synthetic',lesson:'Reject bad grids',checks:[]};
+  ui.context.fetch=async()=>({ok:true,json:async()=>({kind:'rejection_check',lab,observed_rejection:'Shifted grid rejected.'})});
+  await ui.run("state.example=null;state.lab='shifted-grid';analyze()");
+  assert.equal(ui.run('state.report'),null);assert.equal(ui.run('state.pendingReview'),null);
+  assert.equal(ui.get('map-stack').hidden,true);assert.equal(ui.get('export-button').disabled,true);
+  assert.match(ui.get('scene-title').textContent,/Input rejected/);
+});
+
+test('failure without a previous accepted result leaves no stale report or enabled exports',async()=>{
+  const ui=await reviewUI();
+  ui.run('state.report=null;state.acceptedInputs=null');
+  const broken=JSON.parse(JSON.stringify(ui.context.fixture));delete broken.source.bounds;
+  ui.context.fetch=async()=>({ok:true,json:async()=>broken});
+  await ui.run('analyze()');
+  assert.equal(ui.run('state.report'),null);assert.equal(ui.get('map-stack').hidden,true);
+  assert.equal(ui.get('export-button').disabled,true);assert.equal(ui.get('geojson-export-button').disabled,true);
+  assert.equal(ui.get('scene-title').textContent,'No accepted analysis');
+});
+test('an accepted empty-string zone ID still captures its draft',async()=>{
+  const ui=await reviewUI();ui.run("state.report.zones[0].id='';state.selected=''");
+  ui.get('review-note').value='Annotation for this zone';ui.get('export-button').click();
+  const exported=JSON.parse(await ui.captured.blob.text());
+  assert.equal(exported.human_reviews[0].zone_id,'');assert.equal(exported.human_reviews[0].note,'Annotation for this zone');
+});
+test('rollback restores the earlier-image layer instead of silently changing the view',async()=>{
+  const ui=await reviewUI();ui.run("state.report.images.earlier='data:image/png;base64,AA==';state.report.images.earlier_evidence='data:image/png;base64,AA=='");
+  ui.get('view-select').value='earlier';
+  ui.context.fetch=async()=>({ok:false,json:async()=>({detail:'Retry later.'})});
+  await ui.run("state.example='replacement';analyze()");
+  assert.equal(ui.get('view-select').value,'earlier');assert.match(ui.get('map-caption').textContent,/Earlier radar/);
+  assert.equal(ui.get('scene-tag').textContent,'PREVIOUS RESULT');
+});
+test('repeated request failures do not overwrite the recoverable review with failed inputs',async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Keep through retries';
+  ui.context.fetch=async()=>({ok:false,json:async()=>({detail:'Busy.'})});
+  await ui.run("state.example='first-attempt';analyze()");
+  await ui.run("state.example='second-attempt';analyze()");
+  assert.equal(ui.run('state.report===fixture'),true);assert.equal(ui.run('state.acceptedInputs.example'),'original');
+  assert.equal(ui.get('review-note').value,'Keep through retries');assert.equal(ui.run('state.reviewsDirty'),true);
+  assert.equal(ui.run('state.pendingReview'),null);
 });
