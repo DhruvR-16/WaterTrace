@@ -476,3 +476,64 @@ test('radar comparison is synchronized and disappears outside paired radar view'
   assert.equal(ui.get('comparison-controls').hidden,true);assert.equal(ui.get('evidence-toggle').disabled,false);
   ui.run('clearReport()');assert.equal(ui.get('comparison-controls').hidden,true);
 });
+
+test('dashboard starts with radar even when optical context exists',async()=>{
+  const ui=await reviewUI();
+  ui.run("state.report.images.optical='optical-context';state.report.context={optical_date:'2020-01-02'};render()");
+  assert.equal(ui.get('view-select').value,'radar');
+  assert.equal(ui.get('satellite').src,ui.context.fixture.images.radar);
+});
+
+test('review progress distinguishes notes from reviewer decisions and tracks export state',async()=>{
+  const ui=await reviewUI();ui.run('render()');
+  assert.match(ui.get('review-progress').textContent,/0 \/ 2/);
+  ui.get('review-note').value='Need a clearer earlier observation';
+  ui.get('review-note').listeners.input();
+  assert.equal(ui.run('state.reviewsDirty'),true);
+  assert.match(ui.get('session-state').textContent,/Unexported notes/);
+  assert.match(ui.get('review-progress').textContent,/0 \/ 2/);
+  ui.run('renderZones()');
+  assert.match(ui.get('zone-list').children[0].children[2].textContent,/note only/);
+  ui.get('review-outcome').value='follow_up';ui.get('review-outcome').listeners.change();
+  assert.match(ui.get('review-progress').textContent,/1 \/ 2/);
+  ui.run('renderZones()');
+  assert.match(ui.get('zone-list').children[0].children[2].textContent,/reviewer decision/);
+  ui.get('export-button').click();
+  assert.equal(ui.run('state.reviewsDirty'),false);
+  assert.match(ui.get('session-state').textContent,/Export requested/);
+  const exported=JSON.parse(await ui.captured.blob.text());
+  assert.equal(exported.human_reviews[0].note,'Need a clearer earlier observation');
+  ui.get('review-note').value='Additional unsaved context';ui.get('review-note').listeners.input();
+  assert.match(ui.get('session-state').textContent,/Unexported notes/);
+});
+
+test('change legend cannot leak into other layers or an empty report',async()=>{
+  const ui=await reviewUI();ui.run("state.report.images.change='change-image'");
+  ui.get('view-select').value='change';ui.run('renderView()');
+  assert.equal(ui.get('change-legend').hidden,false);
+  ui.get('view-select').value='radar';ui.run('renderView()');
+  assert.equal(ui.get('change-legend').hidden,true);
+  ui.get('view-select').value='change';ui.run('renderView();clearReport()');
+  assert.equal(ui.get('change-legend').hidden,true);
+  assert.equal(ui.get('review-progress').textContent,'No zones to review');
+});
+
+test('busy state is exposed to assistive technology and clears after failure',async()=>{
+  const ui=await reviewUI();ui.run('busy(true)');
+  assert.equal(ui.get('main-content').attributes['aria-busy'],'true');
+  ui.context.fetch=async()=>({ok:false,json:async()=>({detail:'Retry later'})});
+  await ui.run("state.example='replacement';analyze()");
+  assert.equal(ui.get('main-content').attributes['aria-busy'],'false');
+  assert.equal(ui.get('scene-tag').textContent,'PREVIOUS RESULT');
+});
+
+test('clearing a note and decision does not leave a reviewed badge',async()=>{
+  const ui=await reviewUI();ui.run('render()');
+  ui.get('review-outcome').value='false_alarm';ui.get('review-outcome').listeners.change();
+  ui.get('review-note').value=' ';
+  ui.get('review-outcome').value='unreviewed';ui.get('review-outcome').listeners.change();
+  ui.run('renderZones()');
+  assert.match(ui.get('review-progress').textContent,/0 \/ 2/);
+  assert.match(ui.get('zone-list').children[0].children[2].textContent,/not reviewed/);
+  assert.doesNotMatch(ui.get('zone-list').children[0].children[2].textContent,/reviewer decision|note only/);
+});

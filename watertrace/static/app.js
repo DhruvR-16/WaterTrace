@@ -10,6 +10,7 @@ function svgElement(tag,attrs) {const el=document.createElementNS('http://www.w3
 function message(text) {$('message').textContent=text;$('message').hidden=!text;}
 function busy(active) {
   $('busy').hidden=!active;
+  $('main-content').setAttribute('aria-busy',String(active));
   document.querySelectorAll('.example,.lab-card,#upload-button,#export-button,#geojson-export-button,#restore-button,#draw-button,#import-button').forEach(el=>el.disabled=active || (['export-button','geojson-export-button','restore-button','draw-button','import-button'].includes(el.id)&&!state.report));
   $('draw-button').disabled=active || !!state.lab || !state.report || state.report.source.crs!=='EPSG:4326';
   $('import-button').disabled=active || !!state.lab || !state.report;
@@ -17,6 +18,8 @@ function busy(active) {
 function clearReport() {
   state.report=null;state.acceptedInputs=null;state.selected=null;state.reviews=Object.create(null);state.reviewsDirty=false;state.filter='all';
   $('lab-result').hidden=true;$('lab-legend').hidden=true;$('normal-legend').hidden=false;
+  $('change-legend').hidden=true;
+  $('session-state').textContent='No accepted observation';$('review-progress').textContent='No zones to review';
   ['water-value','unknown-value','coverage-value','date-value'].forEach(id=>$(id).textContent='—');
   $('map-stack').hidden=true;$('map-placeholder').hidden=false;$('zone-detail').hidden=true;
   $('comparison-controls').hidden=true;$('comparison-earlier').hidden=true;
@@ -94,7 +97,8 @@ function render() {
   $('map-placeholder').hidden=true;$('map-stack').hidden=false;
   $('satellite').width=r.source.width;$('satellite').height=r.source.height;
   for(const option of $('view-select').options)option.disabled=!r.images[option.value];
-  $('view-select').value=r.images.optical?'optical':'radar';
+  // Start with the actual inference input, not optional optical context.
+  $('view-select').value='radar';
   $('zone-svg').setAttribute('viewBox',`0 0 ${r.source.width} ${r.source.height}`);$('zone-svg').setAttribute('preserveAspectRatio','none');
   $('zone-count').textContent=String(r.zones.length).padStart(2,'0');
   renderView();renderZones();renderDetail();renderTimeline();
@@ -123,6 +127,7 @@ function renderView() {
   $('evidence').hidden=exclusiveView||!$('evidence-toggle').checked;
   $('evidence-toggle').disabled=exclusiveView;
   $('lab-legend').hidden=view!=='errors';$('normal-legend').hidden=exclusiveView;
+  $('change-legend').hidden=view!=='change';
   if(view==='change'){$('map-caption').textContent='Paired screening, not verified flood change: cyan = new-water candidate; blue = water at both dates (not continuous duration); orange = earlier water no longer detected (not proven recession); purple = current water without a baseline; light grey = no water detected at either date; dark = other unknown evidence. The queue describes current observations.';return;}
   if(comparing){$('map-caption').textContent=`Left: ${r.reference.observed_on}. Right: ${r.source.observed_on}. Matching grid, fixed −30 to 0 dB scale. Move the slider or use arrow keys. Water overlays are hidden; zones and the queue describe the current observation. Dark radar is not proof of water.`;return;}
   if(evaluationView){$('map-caption').textContent=(view==='errors'?'Evaluation only: blue = correct water, coral = false alarm, violet = missed water (including unknown predictions), grey = labeled no-water without a water prediction (including unknown), dark = unlabeled.':'Independent reference labels: blue = labeled water, grey = labeled no-water, dark = excluded NoData. Labels are not supplied to inference.')+' Selected exposed-test replay; not a new accuracy estimate.';return;}
@@ -132,6 +137,7 @@ function renderView() {
 function rings(geometry){return geometry.type==='MultiPolygon'?geometry.coordinates.map(p=>p[0]):[geometry.coordinates[0]];}
 function renderZones() {
   const r=state.report;if(!r)return;
+  renderReviewProgress();
   document.querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===state.filter)));
   const filtered=r.zones.filter(z=>state.filter==='all'||z.status===state.filter);
   $('zone-list').replaceChildren(...filtered.map(zone=>{
@@ -139,7 +145,9 @@ function renderZones() {
     const title=element('div',undefined,'zone-line');title.append(element('span',zone.name),element('span',M.statuses[zone.status],'status-label'));
     const bar=svgElement('svg',{viewBox:'0 0 100 4',height:4,width:'100%','aria-hidden':'true',class:'zone-bar'});
     bar.append(svgElement('rect',{x:0,y:0,width:100,height:4,fill:'#e8eae1'}),svgElement('rect',{x:0,y:0,width:zone.water_fraction*100,height:4,fill:'#269dc6'}),svgElement('rect',{x:zone.water_fraction*100,y:0,width:(1-zone.coverage)*100,height:4,fill:'#e7bf63'}));
-    button.append(title,bar,element('small',`${M.areaLabel(zone.water_observed_ha)} ha water · ${percent(1-zone.coverage)} uncertain${state.reviews[zone.id]?' · reviewed':''}`));
+    const annotation=state.reviews[zone.id];
+    const reviewLabel=annotation?(annotation.outcome==='unreviewed'?(annotation.note.trim()?' · note only':' · not reviewed'):' · reviewer decision'):'';
+    button.append(title,bar,element('small',`${M.areaLabel(zone.water_observed_ha)} ha water · ${percent(1-zone.coverage)} uncertain${reviewLabel}`));
     button.addEventListener('click',()=>selectZone(zone.id));return button;
   }));
   if(!filtered.length)$('zone-list').append(element('p','No zones in this queue.','empty'));
@@ -157,12 +165,22 @@ function renderZones() {
   }
   if(state.points.length)svg.append(svgElement('polygon',{points:state.points.map(p=>p.join(',')).join(' '),class:'draft'}));
 }
+function renderReviewProgress(){
+  if(!state.report)return;
+  const zones=state.report.zones;
+  const reviewed=zones.filter(z=>state.reviews[z.id]&&state.reviews[z.id].outcome!=='unreviewed').length;
+  const progress=`${reviewed} / ${zones.length} zones with reviewer decisions · not verified findings`;
+  const session=state.reviewsDirty?'Unexported notes · export before leaving':'Session ready · review and export';
+  if($('review-progress').textContent!==progress)$('review-progress').textContent=progress;
+  if($('session-state').textContent!==session)$('session-state').textContent=session;
+}
 function captureReviewDraft(){
   if(!state.report || state.selected==null)return;
   const outcome=$('review-outcome').value,note=$('review-note').value.slice(0,1000);
   if(M.reviewChanged(state.reviews[state.selected],outcome,note)){
     state.reviews[state.selected]={outcome,note,recorded_at:new Date().toISOString()};state.reviewsDirty=true;
   }
+  renderReviewProgress();
 }
 function confirmReviewReplacement(action='analysis'){
   if(state.controller)return false;
@@ -208,7 +226,7 @@ $('cancel-draw').addEventListener('click',()=>{stopDrawing();message('');});
 $('import-button').addEventListener('click',()=>$('geojson-file').click());
 $('geojson-file').addEventListener('change',async event=>{const file=event.target.files[0],report=state.report;event.target.value='';if(!file)return;try{if(file.size>200000)throw new Error('Use a GeoJSON file under 200 KB.');const value=JSON.parse(await file.text());if(!value||value.type!=='FeatureCollection'||!Array.isArray(value.features))throw new Error('Import a GeoJSON FeatureCollection.');if(state.report!==report||state.controller)throw new Error('Observation changed while reading the file. Choose it again.');if(!confirmReviewReplacement())return;state.zones=value;await analyze();}catch(error){message(error.message);}});
 $('save-review').addEventListener('click',()=>{captureReviewDraft();renderZones();message('Review saved in this browser session. Export it before closing. The algorithmic findings are unchanged.');});
-$('export-button').addEventListener('click',()=>{if(!state.report)return;captureReviewDraft();const value=M.reviewExport(state.report,state.reviews);const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=element('a');link.href=url;link.download=`watertrace-review-${state.report.source.sha256.slice(0,12)}.json`;link.click();state.reviewsDirty=false;message('Export requested. Verify the downloaded file before leaving. Locations and human notes may be sensitive.');setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('export-button').addEventListener('click',()=>{if(!state.report)return;captureReviewDraft();const value=M.reviewExport(state.report,state.reviews);const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=element('a');link.href=url;link.download=`watertrace-review-${state.report.source.sha256.slice(0,12)}.json`;link.click();state.reviewsDirty=false;renderReviewProgress();$('session-state').textContent='Export requested · verify your download';message('Export requested. Verify the downloaded file before leaving. Locations and human notes may be sensitive.');setTimeout(()=>URL.revokeObjectURL(url),1000);});
 $('geojson-export-button').addEventListener('click',()=>{
   if(!state.report||state.controller)return;
   captureReviewDraft();
@@ -234,6 +252,7 @@ $('review-file').addEventListener('change',async event=>{
 });
 $('view-select').addEventListener('change',renderView);$('evidence-toggle').addEventListener('change',renderView);$('zones-toggle').addEventListener('change',renderZones);
 $('comparison-toggle').addEventListener('change',renderView);$('comparison-position').addEventListener('input',renderView);
+$('review-note').addEventListener('input',captureReviewDraft);$('review-outcome').addEventListener('change',captureReviewDraft);
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{state.filter=button.dataset.filter;renderZones();}));
 $('cancel-button').addEventListener('click',()=>state.controller?.abort());
 $('method-button').addEventListener('click',()=>$('method-dialog').showModal());$('upload-button').addEventListener('click',()=>$('upload-dialog').showModal());
