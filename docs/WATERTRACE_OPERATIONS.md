@@ -62,5 +62,5 @@ resources. No credentials should enter chat, Git, images or reports. Then:
    have also been removed. Budget alerts alone are not a hard spending limit.
 
 No AWS use, cost estimate, public endpoint, production readiness or cloud
-performance is claimed by the local benchmark. See the submission pack for the
-remaining video, access and competition requirements.
+performance is claimed by the local benchmark. See the [demo and deployment guide](WATERTRACE_DEMO_DEPLOYMENT.md) for
+walkthrough preparation, access controls and deployment requirements.

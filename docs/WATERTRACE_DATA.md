@@ -6,7 +6,7 @@ The downloader reads the public [Sen1Floods11 v1.1](https://github.com/cloudtost
 
 Attribution: Bonafilia, Tellman, Anderson & Issenberg (2020), Cloud to Street, *Sen1Floods11: a georeferenced dataset to train and test deep learning flood algorithms for Sentinel-1*. Contains modified Copernicus Sentinel data.
 
-The project does not redistribute dataset rasters in Git or Docker. Public download access is not proof of redistribution permission. We did not find an authoritative standalone upstream license file during this build; mirror license labels were not treated as permission. Confirm upstream terms before distributing rasters, derived previews, public demos or competition media. The code's license cannot relicense third-party data.
+The project does not redistribute dataset rasters in Git or Docker. Public download access is not proof of redistribution permission. We did not find an authoritative standalone upstream license file during this build; mirror license labels were not treated as permission. Confirm upstream terms before distributing rasters, derived previews, public demos or promotional media. The code's license cannot relicense third-party data.
 
 ## Selection and separation
 

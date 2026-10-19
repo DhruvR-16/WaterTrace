@@ -1,8 +1,8 @@
-# WaterTrace submission pack — working draft
+# WaterTrace demo and deployment guide
 
-Owner decision: proceed toward AWS deployment. Provisioning awaits an approved account/profile, region and spending cap; no resources have been created. This pack is not a completed competition entry. Check [official requirements](https://opencv26.devpost.com/rules) and [submission page](https://opencv26.devpost.com/) before submitting. Do not claim a deployment, reviewed users, agentic qualification, COOL/Graviton execution or an award.
+WaterTrace is a standalone satellite-evidence review project. AWS deployment is planned but awaits an approved account/profile, region and spending cap; no resources have been created. This guide separates implemented functionality from planned deployment and validation work.
 
-## Short pitch
+## Project overview
 
 WaterTrace is a satellite-evidence review workspace for a proposed farming-cooperative or NGO workflow after flooding. It separates water-like observations from missing evidence, traces comparisons to source dates and hashes, and withholds change claims where an earlier baseline is unassessable. A reviewer can inspect hard cases, annotate geographic zones and export an auditable handoff. It requires no field hardware.
 
@@ -39,7 +39,7 @@ This is the implemented local architecture. An AWS-hosted version must be labele
 
 ## Demo recording script — target 4 minutes 40 seconds
 
-1. **0:00–0:25:** Introduce the team and problem. “A satellite gap must not become a safe-field conclusion.” State research-prototype scope.
+1. **0:00–0:25:** Introduce the project and problem. “A satellite gap must not become a safe-field conclusion.” State research-prototype scope.
 2. **0:25–1:10:** Load India. Identify acquisition date, uncertainty and an illustrative zone. Explain these are not verified farm boundaries.
 3. **1:10–2:00:** Upload the Beira pair. Wipe between dates, then show change categories. Point out water with no earlier baseline and explain why it cannot be called new flooding.
 4. **2:00–2:40:** Open Sri Lanka’s exposed-test failure; show missed water. Run the synthetic tiny-field or shifted-grid case and explain its limits.
@@ -47,11 +47,11 @@ This is the implemented local architecture. An AWS-hosted version must be labele
 6. **3:15–4:05:** Explain the architecture and actual OpenCV work. Show baseline precision/recall trade-off. If and only if AWS is deployed, demonstrate a real core analysis there, not just a static page or S3 download.
 7. **4:05–4:40:** State measured scope, known failures and next validation step. Show repository/setup links and give attribution.
 
-Record actual current software; avoid simulated cloud outputs, invented users and unlicensed stock footage. Verify audio, readable captions, team identification, link access in a signed-out window and total duration. The video has **not** been recorded. Browser visual QA remains outstanding under the current access restriction.
+Record actual current software; avoid simulated cloud outputs, invented users and unlicensed stock footage. Verify audio, readable captions, link access in a signed-out window and total duration. The video has **not** been recorded. Browser visual QA remains outstanding under the current access restriction.
 
-## Real reviewer study protocol — ready, not conducted
+## Optional future usability study — not conducted
 
-Recruit 3–5 consenting remote-sensing/agriculture/disaster-response practitioners through owner-approved contacts. No outreach is authorized yet. Explain the research scope, optional participation and how notes will be retained; use public sample locations, not sensitive farmer data.
+User studies are outside the current implementation scope. For a future study, recruit 3–5 consenting remote-sensing/agriculture/disaster-response practitioners through owner-approved contacts. No outreach is authorized yet. Explain the research scope, optional participation and how notes will be retained; use public sample locations, not sensitive farmer data.
 
 Use two equivalent task sets: one with source imagery plus ordinary map/metadata review, one with WaterTrace. Counterbalance order between participants and avoid showing the same answer twice. Tasks: identify areas needing more evidence; distinguish repeated/new/missing-baseline water; recognize a paddy ambiguity; export a handoff. Keep task difficulty and available source material comparable.
 
@@ -84,8 +84,7 @@ Deployment blockers to resolve, not silently bypass:
 - Approve image architecture, cache distribution permissions, health probes, private network/egress and infrastructure teardown. No AWS template is applied by this repository.
 - Estimate region-specific compute, load-balancer, networking, logs and storage costs before approval. Budget alerts are **not** a guaranteed hard spending cap; consult [AWS Budgets](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html). No cost or free-tier eligibility is assumed.
 - Record image digest, commit, OpenCV version, timestamp, representative request, response hash, latency/memory and cleanup evidence from the actual AWS run. Public S3 imagery access alone is not an AWS deployment claim.
-- Keep COOL/Graviton and Agentic claims unchecked unless separately demonstrated against the official category definitions.
 
 ## Final release gate
 
-Complete AWS evidence or obtain an organizer-approved alternative; arrange judge access to the private repo and demo; finish the video/report; review media rights; rerun local verification and inspect deployment logs for sensitive data. Actual reviewer feedback and independent temporal validation remain outstanding scientific credibility work. Never convert these unchecked items into claims merely to finish the entry.
+Before presenting a hosted service, verify actual deployment, configure appropriate repository/demo access, review media rights, rerun local verification and inspect logs for sensitive data. Independent temporal validation and real-user evidence remain separate future work. A recorded walkthrough must show the actual software and disclose its limitations.

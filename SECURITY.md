@@ -30,6 +30,6 @@ Dataset integrity checks compare bounded local files with local manifest hashes,
 
 ## Before public deployment
 
-Add HTTPS, authentication appropriate to the audience, proxy-level upload limits, rate limits, resource isolation, dependency auditing, and a reviewed retention/logging policy. Do not infer a verified AWS or COOL deployment from the configurable deployment label. The current code does not establish competition eligibility or production security.
+Add HTTPS, authentication appropriate to the audience, proxy-level upload limits, rate limits, resource isolation, dependency auditing, and a reviewed retention/logging policy. Do not infer a verified AWS or COOL deployment from the configurable deployment label. The current code is a research prototype, not a production security boundary.
 
 Do not post credentials, private charts, or sensitive reproduction details in public issues. Share security reports with the repository owner through a private channel.

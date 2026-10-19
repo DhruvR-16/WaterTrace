@@ -10,6 +10,18 @@ Built for a proposed farming-cooperative / NGO post-flood workflow: **water obse
 
 **Status: working research prototype, not a validated agricultural decision system.** It uses actual Sentinel-1 imagery and OpenCV 5, not a simulated satellite dashboard. It does not establish crop damage, flood depth, continuous flooding, soil waterlogging, or access safety. We have not demonstrated superiority to operational flood-mapping systems.
 
+## Project at a glance
+
+- **Stack:** Python, OpenCV 5, FastAPI, Rasterio, PROJ and a buildless JavaScript interface.
+- **Core engineering:** bounded geospatial uploads, explicit unknown-pixel states, paired-date evidence accounting, recoverable review workflows and provenance-preserving exports.
+- **Evaluation:** reproducible 90-chip, 10-event benchmark with four methods, regional failure analysis and event-clustered uncertainty intervals. This is an exposed evaluation set, not a new blind test.
+- **Verification:** offline software tests, generated edge cases, cache-integrity checks and report replay. These verify software behavior and reproducibility, not field impact.
+
+Start with the [architecture](docs/WATERTRACE_ARCHITECTURE.md),
+[evaluation](docs/WATERTRACE_BENCHMARK.md),
+[engineering decisions](docs/WATERTRACE_ENGINEERING.md), or
+[demo and deployment guide](docs/WATERTRACE_DEMO_DEPLOYMENT.md).
+
 ## Run locally
 
 ### Upgrading from earlier names
@@ -94,7 +106,7 @@ Open **Evidence Lab** in the top bar. Test missing earlier pixels, repeated wate
 
 ## Evidence, not a headline accuracy score
 
-The [filtered-baseline experiment](docs/WATERTRACE_EXPERIMENTS.md) adds two fixed controls without changing production inference. The [submission pack](docs/WATERTRACE_SUBMISSION.md) includes a report index, architecture diagram, recording script, reviewer protocol and local deployment rehearsal. The owner has requested AWS deployment; provisioning awaits an approved account/profile, region and spending cap. No AWS deployment or completed submission is claimed.
+The [filtered-baseline experiment](docs/WATERTRACE_EXPERIMENTS.md) adds two fixed controls without changing production inference. The [demo and deployment guide](docs/WATERTRACE_DEMO_DEPLOYMENT.md) includes a technical report index, architecture diagram, walkthrough and local deployment rehearsal. The owner has requested AWS deployment; provisioning awaits an approved account/profile, region and spending cap. No AWS deployment is claimed.
 
 The initial fixed policy was evaluated on all **90 chips in the Sen1Floods11 v1.1 test split**, across 10 events and 20,517,367 labeled pixels. Inference never reads labels. One rejected scene remains in scoring as wholly unknown; unknown water counts as missed water, not as an excluded hard case.
 
@@ -171,7 +183,7 @@ Independent label rasters → evaluator / explicit Evidence Lab scoring AFTER in
                            (never classification or review-queue inputs)
 ```
 
-See [technical design](docs/WATERTRACE_ARCHITECTURE.md), [security boundaries](SECURITY.md), and [competition / portfolio readiness](docs/WATERTRACE_READINESS.md).
+See [technical design](docs/WATERTRACE_ARCHITECTURE.md), [security boundaries](SECURITY.md), and [project readiness](docs/WATERTRACE_READINESS.md).
 
 The default Dockerfile packages WaterTrace without datasets or credentials. It is prepared for local testing; **a container build/run has not yet been verified because the local Docker daemon is unavailable**. No AWS resources have been created. No AWS, Graviton, or COOL performance claim is made.
 
