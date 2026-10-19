@@ -104,10 +104,21 @@ The initial fixed policy was evaluated on all **90 chips in the Sen1Floods11 v1.
 .venv/bin/python scripts/check_watertrace_lab.py
 node --test tests/watertrace.test.cjs
 .venv/bin/python scripts/fetch_watertrace_data.py --split test
+.venv/bin/python scripts/verify_watertrace_data.py --split test
 .venv/bin/python scripts/evaluate_watertrace.py --split test --output artifacts/my-evaluation.json
 ```
 
 The test download is about 147 MB. The evaluator refuses to replace an existing output file. Unit tests use self-generated rasters and need no network. Node 22+ is only needed for optional frontend tests; there is no frontend build step.
+
+### Check cached datasets offline
+
+```sh
+.venv/bin/python scripts/verify_watertrace_data.py --split demo
+```
+
+Choose `demo`, `lab`, `valid`, or `test`; use `--data /absolute/cache/path` for a custom location. The command makes no network requests or file changes. It checks each manifest-listed object's size and SHA-256, reports `ok`, `missing`, `mismatch`, or `unreadable_or_unsafe`, and exits `0` for a matching cache, `1` for failed objects, or `2` for a missing/invalid manifest. This verifies consistency with a local record—not upstream authenticity, valid radar calibration, complete dataset membership, or scientific accuracy.
+
+The downloader now checks existing manifests before reuse and refuses to silently record changed bytes as a fresh baseline. Missing objects can be downloaded again but must match their recorded hashes. Files not covered by a manifest must match a fresh download before reuse. On a mismatch, preserve or move the named file aside, then rerun the relevant download; do not delete the manifest to bypass the warning. Conflicting manifests require manual reconciliation. Downloaded objects are published without overwriting another writer, and manifests are replaced only after a complete staged write. A failed batch can leave completed objects for the next run, but does not publish a partial new manifest.
 
 CLI example (after downloading the demos):
 

@@ -19,6 +19,8 @@ WaterTrace is a local research prototype, not a hardened multi-tenant service.
 
 ## Keep private data out of Git
 
+Dataset integrity checks compare bounded local files with local manifest hashes, not signed upstream metadata. They reject traversal, symlink components, duplicate object records, conflicting manifests and changed recorded bytes. Unrecorded cached files require a fresh-download match. New objects are published with exclusive hard links; manifests use complete-file replacement. These protections assume a trusted local cache directory, not hostile concurrent filesystem mutation. They do not authenticate the dataset, validate raster semantics, or automatically prevent analysis of files supplied outside this download workflow. No corrupted object is automatically deleted or overwritten.
+
 - Never commit API tokens, AWS credentials, private keys, `.env` files, real user uploads, or confidential exported reports.
 - Use environment variables, an appropriate secrets manager, or your existing cloud credential provider when cloud integration is implemented. No API key is required by the current local application.
 - Review `git diff --cached` and scan staged content and Git history with a secret scanner before publishing. `.gitignore` does not protect already-tracked files or secrets embedded in source code.
