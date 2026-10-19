@@ -94,7 +94,7 @@ Open **Evidence Lab** in the top bar. Test missing earlier pixels, repeated wate
 
 ## Evidence, not a headline accuracy score
 
-The [filtered-baseline experiment](docs/WATERTRACE_EXPERIMENTS.md) adds two fixed controls without changing production inference. The [submission pack](docs/WATERTRACE_SUBMISSION.md) includes a report index, architecture diagram, recording script, reviewer protocol and local deployment rehearsal. AWS remains deferred by the owner; a completed submission is not claimed.
+The [filtered-baseline experiment](docs/WATERTRACE_EXPERIMENTS.md) adds two fixed controls without changing production inference. The [submission pack](docs/WATERTRACE_SUBMISSION.md) includes a report index, architecture diagram, recording script, reviewer protocol and local deployment rehearsal. The owner has requested AWS deployment; provisioning awaits an approved account/profile, region and spending cap. No AWS deployment or completed submission is claimed.
 
 The initial fixed policy was evaluated on all **90 chips in the Sen1Floods11 v1.1 test split**, across 10 events and 20,517,367 labeled pixels. Inference never reads labels. One rejected scene remains in scoring as wholly unknown; unknown water counts as missed water, not as an excluded hard case.
 

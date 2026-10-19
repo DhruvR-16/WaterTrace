@@ -1,6 +1,6 @@
 # WaterTrace submission pack — working draft
 
-Owner decision: AWS remains deferred. This pack is not a completed competition entry. Check [official requirements](https://opencv26.devpost.com/rules) and [submission page](https://opencv26.devpost.com/) before submitting. Do not claim a deployment, reviewed users, agentic qualification, COOL/Graviton execution or an award.
+Owner decision: proceed toward AWS deployment. Provisioning awaits an approved account/profile, region and spending cap; no resources have been created. This pack is not a completed competition entry. Check [official requirements](https://opencv26.devpost.com/rules) and [submission page](https://opencv26.devpost.com/) before submitting. Do not claim a deployment, reviewed users, agentic qualification, COOL/Graviton execution or an award.
 
 ## Short pitch
 
@@ -68,11 +68,12 @@ docker compose config --quiet
 docker compose up --build
 # In another terminal:
 curl --fail http://127.0.0.1:8000/api/health
+.venv/bin/python scripts/smoke_watertrace.py
 # Stop the owned rehearsal when finished:
 docker compose down
 ```
 
-The Docker daemon was unavailable during this work; do not label container execution verified. Check cache permissions for the image UID 10001 without broadly exposing sensitive files. Test a valid upload, oversized rejection, malformed-input recovery, pair, export and restart before any hosting.
+The Docker daemon was unavailable during this work; do not label container execution verified. The AWS CLI and Session Manager plugin are not installed on this workstation. The smoke script checks the served dashboard assets, actual single/paired synthetic raster processing, malformed-input recovery and host/origin/CSP protections; it does not establish container execution, browser rendering or AWS use unless run against that independently verified runtime. Check cache permissions for the image UID 10001 without broadly exposing sensitive files. Test a valid upload, oversized rejection, malformed-input recovery, pair, export and restart before any hosting.
 
 After explicit account/region/budget approval, a possible target is an authenticated ECS Fargate service running the actual OpenCV pipeline, with a private ECR image, explicit ingress, TLS, bounded concurrency and short-lived logs. A 2-vCPU/4-GiB task is a supported configuration, not a measured capacity guarantee. Use separate least-privilege task and execution roles; no embedded AWS keys. See [supported task sizing](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html) and [task role guidance](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html).
 

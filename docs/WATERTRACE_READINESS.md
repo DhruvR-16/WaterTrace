@@ -13,7 +13,9 @@ The Sites local-preview guidance informed browser verification and responsive la
 
 ## Local verification record
 
-Latest local suite: **305 Python tests and 80 JavaScript tests passed** after the guided-review update; dependency consistency passed. The existing Compose configuration previously passed validation. Container execution and fresh browser visual QA remain unverified.
+Latest local suite: **306 Python tests and 80 JavaScript tests passed** after the deployment-readiness patch; dependency consistency and Compose configuration validation passed. Container execution and fresh browser visual QA remain unverified.
+
+- Deployment-readiness patch: moved the comparison image's inline style to the same-origin stylesheet, preserving the strict CSP; a markup contract test now rejects inline styles and event handlers. The Sites local workflow guided this scoped UI fix. Expanded the live HTTP smoke check to cover dashboard assets, synthetic single/paired processing, malformed-input recovery and origin/host/CSP protections. All nine synthetic exercises passed and the Beira report reproduced offline. AWS is now requested, pending account/profile, region and spending cap. The AWS CLI and Session Manager plugin are absent; Docker execution remains unavailable. No cloud resources were created and no scientific-performance change is claimed.
 
 - Guided-review update: removed automatic analysis on page load; added an explicit starter, plain-language interpretation, evidence-first next-step planning and save/continue navigation. Missing or unknown gates are not treated as low risk, and notes alone are not counted as reviewer decisions. Queue filters now preserve drafts and select a matching visible zone (or hide details for an empty queue). Optional exports, custom boundaries and technical history use native collapsed details. Browser review JSON includes versioned derived guidance without changing pixel inference, zone decisions, CLI output or geographic exports. Tests cover ordering, stable ties, unknown gates, prototype-like IDs, pending/completed states, draft preservation, queue/detail consistency, no automatic inference, synthetic disclosure, export/restoration and progressive controls. The real Beira report reproduced unchanged offline; the separately prepared Búzi manual-trial rasters were not analyzed. HTTP checks confirm the running local server serves the new page/scripts/styles, not a fresh rendered-browser QA result. The Sites skill guided progressive disclosure and the local-only workflow. AWS remains deferred.
 
@@ -46,7 +48,7 @@ Latest local suite: **305 Python tests and 80 JavaScript tests passed** after th
 The project still targets [OpenCV AI Competition 2026](https://opencv26.devpost.com/), but a local prototype is not a completed submission. Recheck the official [rules](https://opencv26.devpost.com/rules) before submitting; this checklist does not override them.
 
 - Substantive OpenCV 5 use: implemented locally.
-- Meaningful AWS deployment/component: **deferred by the project owner**. No account usage, spending or resources provisioned.
+- Meaningful AWS deployment/component: **requested by the owner; awaiting account/profile, region and spending cap**. No account usage, spending or resources provisioned. Earlier release entries record the previous deferral, not the current intent.
 - Public endpoint or arranged live demonstration: not prepared; local-only now.
 - Technical report: architecture, dataset, fixed policy, benchmark, failure modes and reproducible instructions are documented. Final submission formatting remains.
 - Demo video: not recorded. Keep within the competition's stated limit and explicitly label historical imagery, unknown regions and research status.
