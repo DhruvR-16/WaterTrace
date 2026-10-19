@@ -37,6 +37,8 @@ Without downloading, upload your own **trusted, north-up, calibrated VV/VH dB Ge
 
 ## What you can do
 
+- Use the redesigned observation → evidence → review workflow, with a dark observation library, responsive evidence canvas, explicit change legend and separate processing/history panels. Radar opens first; optical imagery remains optional context.
+- Track reviewer decisions independently from notes. Drafts are captured in session as you type, and the dashboard warns when notes have not been exported. This is not durable browser storage: export and verify the downloaded file before leaving.
 - Compare matching acquisitions with a keyboard-accessible radar wipe and a categorical change view that keeps missing earlier evidence distinct from new water. Reproduce the [Beira public-data pair](docs/WATERTRACE_PAIR_CASE.md) locally; it is a pipeline case, not validated flood-change accuracy.
 - Before presenting that prepared pair, run `.venv/bin/python scripts/prepare_watertrace_pair.py --verify` to check crop fingerprints and reproduce the saved report offline without modifying files.
 - Start with India, then replay actual historical observations from Spain and the USA. Optical imagery is context only, not an inference input or cloud-screened truth.
