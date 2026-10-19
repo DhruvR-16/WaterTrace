@@ -448,3 +448,31 @@ test('repeated request failures do not overwrite the recoverable review with fai
   assert.equal(ui.get('review-note').value,'Keep through retries');assert.equal(ui.run('state.reviewsDirty'),true);
   assert.equal(ui.run('state.pendingReview'),null);
 });
+
+test('paired change view isolates categories from water and evaluation overlays',async()=>{
+  const ui=await reviewUI();ui.run("state.report.images.change='change-png'");
+  ui.get('view-select').value='change';ui.run('renderView()');
+  assert.equal(ui.get('satellite').src,'change-png');
+  assert.equal(ui.get('evidence').hidden,true);assert.equal(ui.get('evidence-toggle').disabled,true);
+  assert.equal(ui.get('lab-legend').hidden,true);assert.equal(ui.get('normal-legend').hidden,true);
+  assert.match(ui.get('map-caption').textContent,/without a baseline/);
+  assert.match(ui.get('map-caption').textContent,/not verified flood change/);
+  ui.get('view-select').value='radar';ui.run('renderView()');
+  assert.equal(ui.get('evidence-toggle').disabled,false);
+});
+
+test('radar comparison is synchronized and disappears outside paired radar view',async()=>{
+  const ui=await reviewUI();ui.run("state.report.images.earlier='earlier-png';state.report.reference={observed_on:'2020-01-01'}");
+  ui.get('view-select').value='radar';ui.get('comparison-toggle').checked=true;
+  ui.get('comparison-position').value='35';ui.run('renderView()');
+  assert.equal(ui.get('comparison-controls').hidden,false);
+  assert.equal(ui.get('comparison-earlier').hidden,false);
+  assert.equal(ui.get('comparison-earlier').style.clipPath,'inset(0 65% 0 0)');
+  assert.equal(ui.get('evidence').hidden,true);assert.equal(ui.get('evidence-toggle').disabled,true);
+  assert.match(ui.get('map-caption').textContent,/Left: 2020-01-01/);
+  ui.get('view-select').value='earlier';ui.run('renderView()');
+  assert.equal(ui.get('comparison-controls').hidden,true);assert.equal(ui.get('comparison-earlier').hidden,true);
+  ui.get('view-select').value='radar';ui.run('state.report.reference=null;state.report.images.earlier=null;renderView()');
+  assert.equal(ui.get('comparison-controls').hidden,true);assert.equal(ui.get('evidence-toggle').disabled,false);
+  ui.run('clearReport()');assert.equal(ui.get('comparison-controls').hidden,true);
+});

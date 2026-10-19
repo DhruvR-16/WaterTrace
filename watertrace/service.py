@@ -32,6 +32,20 @@ def overlay(classes):
     return png(result)
 
 
+def change_preview(current, earlier):
+    """Display all nine state pairs without interpreting missing evidence as change.
+
+    OpenCV encodes BGR; these are display categories, not a new classifier.
+    """
+    result = np.full((*current.shape, 3), (65, 55, 50), np.uint8)
+    result[(current == 1) & (earlier == 1)] = (220, 220, 220)
+    result[(current == 2) & (earlier == 1)] = (190, 210, 0)  # cyan: new candidate
+    result[(current == 2) & (earlier == 2)] = (190, 95, 35)  # blue: repeated
+    result[(current == 1) & (earlier == 2)] = (45, 145, 235)  # orange: no longer detected
+    result[(current == 2) & (earlier == 0)] = (190, 100, 180)  # purple: missing baseline
+    return png(result)
+
+
 def run_analysis(raw, *, name="Radar scene", observed_on=None, reference_raw=None,
                  reference_on=None, same_orbit=False, zones=None):
     start = time.perf_counter()
@@ -93,6 +107,7 @@ def run_analysis(raw, *, name="Radar scene", observed_on=None, reference_raw=Non
                   "Area uses pixel centers and row-wise geodesic pixel-area estimates; small/boundary-crossing fields require review."],
               "images": {"radar": radar_preview(raster), "evidence": overlay(classes),
                          "earlier": radar_preview(reference) if reference else None,
+                         "change": change_preview(classes, before) if before is not None else None,
                          "earlier_evidence": overlay(before) if before is not None else None},
               "elapsed_ms": round((time.perf_counter()-start)*1000)}
     return result

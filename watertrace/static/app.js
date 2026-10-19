@@ -19,6 +19,7 @@ function clearReport() {
   $('lab-result').hidden=true;$('lab-legend').hidden=true;$('normal-legend').hidden=false;
   ['water-value','unknown-value','coverage-value','date-value'].forEach(id=>$(id).textContent='—');
   $('map-stack').hidden=true;$('map-placeholder').hidden=false;$('zone-detail').hidden=true;
+  $('comparison-controls').hidden=true;$('comparison-earlier').hidden=true;
   $('zone-list').replaceChildren(element('p','Analysis in progress…','empty'));$('trace').replaceChildren();$('timeline').replaceChildren();
   $('zone-count').textContent='00';$('source-caption').textContent='Awaiting analysis';$('scene-title').textContent='Inspecting observation';
   $('scene-tag').textContent='NO RESULT';$('region-code').textContent='';$('engine').textContent='No accepted analysis';
@@ -103,13 +104,27 @@ function render() {
 function renderView() {
   if(!state.report)return;
   const r=state.report,view=$('view-select').value;
-  const layerNames={optical:'optical context',earlier:'earlier VV radar',radar:'current VV radar',errors:'evaluation error map',reference_labels:'independent reference labels'};
+  const layerNames={optical:'optical context',earlier:'earlier VV radar',radar:'current VV radar',change:'paired change evidence',errors:'evaluation error map',reference_labels:'independent reference labels'};
   $('satellite').src=r.images[view];$('satellite').alt=`${r.name} — ${layerNames[view]}`;
   $('evidence').src=view==='earlier'?r.images.earlier_evidence:r.images.evidence;
   const evaluationView=['errors','reference_labels'].includes(view);
-  $('evidence').hidden=evaluationView||!$('evidence-toggle').checked;
-  $('evidence-toggle').disabled=evaluationView;
-  $('lab-legend').hidden=view!=='errors';$('normal-legend').hidden=evaluationView;
+  const canCompare=view==='radar'&&Boolean(r.images.earlier&&r.reference);
+  const comparing=canCompare&&$('comparison-toggle').checked;
+  $('comparison-controls').hidden=!canCompare;
+  $('comparison-position').disabled=!comparing;
+  $('comparison-earlier').hidden=!comparing;
+  if(comparing){
+    const raw=Number($('comparison-position').value),position=Number.isFinite(raw)?Math.max(0,Math.min(100,raw)):50;
+    $('comparison-earlier').src=r.images.earlier;
+    $('comparison-earlier').style.clipPath=`inset(0 ${100-position}% 0 0)`;
+    $('comparison-position').setAttribute('aria-valuetext',`${position}% earlier radar revealed`);
+  }
+  const exclusiveView=evaluationView||view==='change'||comparing;
+  $('evidence').hidden=exclusiveView||!$('evidence-toggle').checked;
+  $('evidence-toggle').disabled=exclusiveView;
+  $('lab-legend').hidden=view!=='errors';$('normal-legend').hidden=exclusiveView;
+  if(view==='change'){$('map-caption').textContent='Paired screening, not verified flood change: cyan = new-water candidate; blue = water at both dates (not continuous duration); orange = earlier water no longer detected (not proven recession); purple = current water without a baseline; light grey = no water detected at either date; dark = other unknown evidence. The queue describes current observations.';return;}
+  if(comparing){$('map-caption').textContent=`Left: ${r.reference.observed_on}. Right: ${r.source.observed_on}. Matching grid, fixed −30 to 0 dB scale. Move the slider or use arrow keys. Water overlays are hidden; zones and the queue describe the current observation. Dark radar is not proof of water.`;return;}
   if(evaluationView){$('map-caption').textContent=(view==='errors'?'Evaluation only: blue = correct water, coral = false alarm, violet = missed water (including unknown predictions), grey = labeled no-water without a water prediction (including unknown), dark = unlabeled.':'Independent reference labels: blue = labeled water, grey = labeled no-water, dark = excluded NoData. Labels are not supplied to inference.')+' Selected exposed-test replay; not a new accuracy estimate.';return;}
   const note=view==='optical'?`Optical context: ${r.context.optical_date}; classification uses radar from ${r.source.observed_on}. Cloud cover is not screened in this preview.`:view==='earlier'?`Earlier radar: ${r.reference.observed_on}. The inspection queue still describes the current observation.`:'VV radar backscatter shown on a fixed −30 to 0 dB scale. Dark does not always mean water.';
   $('map-caption').textContent=note+(r.context?.optical_status==='unavailable'?' Optical context is unavailable; radar analysis is unaffected.':'')+' Zones: '+r.zone_basis+'.';
@@ -218,6 +233,7 @@ $('review-file').addEventListener('change',async event=>{
   }catch(error){message(error.message);}
 });
 $('view-select').addEventListener('change',renderView);$('evidence-toggle').addEventListener('change',renderView);$('zones-toggle').addEventListener('change',renderZones);
+$('comparison-toggle').addEventListener('change',renderView);$('comparison-position').addEventListener('input',renderView);
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{state.filter=button.dataset.filter;renderZones();}));
 $('cancel-button').addEventListener('click',()=>state.controller?.abort());
 $('method-button').addEventListener('click',()=>$('method-dialog').showModal());$('upload-button').addEventListener('click',()=>$('upload-dialog').showModal());
