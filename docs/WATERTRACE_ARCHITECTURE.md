@@ -19,6 +19,7 @@ Help a cooperative or NGO reviewer separate (1) areas with water-like evidence, 
 | `watertrace/static/` | Buildless UI, map/zone selection, drawing/import, in-memory human review and JSON/GeoJSON export |
 | `watertrace/cli.py` | Same analysis without a browser; private no-overwrite output |
 | `scripts/evaluate_watertrace.py` | Separate independent-label scoring; never imported by inference |
+| `watertrace/pair_search.py` / `scripts/prepare_watertrace_pair.py` | Bounded provider-specific metadata shortlist, explicit acquisition approval and quality-preserving crop conversion; no autonomous interventions |
 
 ## Fixed v1 image policy
 
@@ -33,6 +34,8 @@ Help a cooperative or NGO reviewer separate (1) areas with water-like evidence, 
 The heuristic is transparent and fast, but not a learned model or calibrated confidence score. OpenCV is substantive: median filtering, Otsu, valid-neighborhood erosion, connected components and visualization encoding execute in the actual inference path. The current distribution reports OpenCV 5.0.0. No COOL backend or Graviton run has been verified.
 
 ## Geographic accounting
+
+Paired reports include a separate categorical preview of all nine earlier/current state combinations. Current unknown stays unknown even if earlier water was detected. Current water with unknown earlier state is explicitly distinct from new water. The frontend's radar wipe reveals the same-grid earlier image over the current one at the same fixed dB scale; classification overlays are disabled during the wipe. Neither view changes the current inspection queue or classification. The real [Beira replay](WATERTRACE_PAIR_CASE.md) checks this pipeline but has no independent temporal accuracy labels.
 
 PROJ converts geographic polygons to the input grid. Shapely validates simple exterior-only polygons, then clips to the scene. Rasterio uses pixel-center inclusion. Areas use WGS84 geodesic cell areas, calculated at each row's center and replicated across the short row; this is an approximation on projected grids. Overlapping review zones are not disjoint and must not be summed as unique affected land. Scene totals describe the whole image, not only imported zones.
 

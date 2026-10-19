@@ -1,0 +1,26 @@
+# Local rehearsal only. This does not create or connect to AWS resources.
+services:
+  watertrace:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=134217728,mode=1777
+    mem_limit: 4g
+    cpus: 2
+    pids_limit: 128
+    environment:
+      WATERTRACE_DEPLOYMENT: local-rehearsal
+      WATERTRACE_DATA: /data
+    volumes:
+      - type: bind
+        source: ./data/watertrace
+        target: /data
+        read_only: true
+        bind:
+          create_host_path: false

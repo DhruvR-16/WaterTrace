@@ -37,6 +37,7 @@ Without downloading, upload your own **trusted, north-up, calibrated VV/VH dB Ge
 
 ## What you can do
 
+- Compare matching acquisitions with a keyboard-accessible radar wipe and a categorical change view that keeps missing earlier evidence distinct from new water. Reproduce the [Beira public-data pair](docs/WATERTRACE_PAIR_CASE.md) locally; it is a pipeline case, not validated flood-change accuracy.
 - Start with India, then replay actual historical observations from Spain and the USA. Optical imagery is context only, not an inference input or cloud-screened truth.
 - Open **Evidence Lab** for four selected real contrast cases from India, Pakistan and Sri Lanka, plus nine executable synthetic hard cases. Inspect reference labels and false-alarm/missed-water maps without feeding labels to inference.
 - Inspect field-level review gates: insufficient resolution/coverage, rice/paddy context, missing earlier baselines, repeat observations, water candidates and low signal. These gates do not certify safe or damaged fields.
@@ -86,6 +87,8 @@ The scope is selected historical observations, not nationwide or worldwide monit
 Open **Evidence Lab** in the top bar. Test missing earlier pixels, repeated water, paddy context, four-pixel fields, a field just outside the image, conflicting radar, shifted grids and all-NoData inputs. A rejection produces no map, queue or export. Synthetic success demonstrates software contracts, not flood-detection accuracy. Read the [showcase guide and selection disclosure](docs/WATERTRACE_SHOWCASE.md).
 
 ## Evidence, not a headline accuracy score
+
+The [filtered-baseline experiment](docs/WATERTRACE_EXPERIMENTS.md) adds two fixed controls without changing production inference. The [submission pack](docs/WATERTRACE_SUBMISSION.md) includes a report index, architecture diagram, recording script, reviewer protocol and local deployment rehearsal. AWS remains deferred by the owner; a completed submission is not claimed.
 
 The initial fixed policy was evaluated on all **90 chips in the Sen1Floods11 v1.1 test split**, across 10 events and 20,517,367 labeled pixels. Inference never reads labels. One rejected scene remains in scoring as wholly unknown; unknown water counts as missed water, not as an excluded hard case.
 
