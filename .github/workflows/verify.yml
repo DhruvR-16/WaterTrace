@@ -1,9 +1,8 @@
 name: Verify WaterTrace
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Repository Actions are disabled by owner request. If re-enabled later,
+  # verification remains manual rather than running on every push or PR.
   workflow_dispatch:
 
 permissions:
