@@ -38,6 +38,7 @@ Without downloading, upload your own **trusted, north-up, calibrated VV/VH dB Ge
 ## What you can do
 
 - Compare matching acquisitions with a keyboard-accessible radar wipe and a categorical change view that keeps missing earlier evidence distinct from new water. Reproduce the [Beira public-data pair](docs/WATERTRACE_PAIR_CASE.md) locally; it is a pipeline case, not validated flood-change accuracy.
+- Before presenting that prepared pair, run `.venv/bin/python scripts/prepare_watertrace_pair.py --verify` to check crop fingerprints and reproduce the saved report offline without modifying files.
 - Start with India, then replay actual historical observations from Spain and the USA. Optical imagery is context only, not an inference input or cloud-screened truth.
 - Open **Evidence Lab** for four selected real contrast cases from India, Pakistan and Sri Lanka, plus nine executable synthetic hard cases. Inspect reference labels and false-alarm/missed-water maps without feeding labels to inference.
 - Inspect field-level review gates: insufficient resolution/coverage, rice/paddy context, missing earlier baselines, repeat observations, water candidates and low signal. These gates do not certify safe or damaged fields.

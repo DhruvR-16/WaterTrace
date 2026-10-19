@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import sys
 from tempfile import NamedTemporaryFile
@@ -16,8 +17,9 @@ from rasterio.windows import Window
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from watertrace.cli import save_report
-from watertrace.engine import read_raster
+from watertrace.cli import bounded_read, save_report
+from watertrace.data_integrity import cache_path, inspect_object, unique_object
+from watertrace.engine import MAX_BYTES, read_raster
 from watertrace.pair_search import asset_url, plan_pair, signature
 from watertrace.service import export_report, run_analysis
 
@@ -91,12 +93,81 @@ def save_bytes(path, raw):
         os.link(staging.name, path)
 
 
+def load_pair_json(root, filename):
+    path = cache_path(root, filename)
+    if not path.is_file():
+        raise ValueError('Expected a regular manifest or report file.')
+    def reject_constant(value):
+        raise ValueError('Non-finite JSON is unsupported.')
+    try:
+        result = json.loads(bounded_read(path, 4 * 1024 * 1024),
+                            object_pairs_hook=unique_object, parse_constant=reject_constant)
+    except (UnicodeError, RecursionError):
+        raise ValueError('Invalid bounded JSON.') from None
+    if not isinstance(result, dict):
+        raise ValueError('Expected a JSON object.')
+    return result
+
+
+def verify_pair(root):
+    """Check local byte consistency and reproduce the report, never repairing it.
+
+    A local manifest is not signed upstream provenance. Agreement cannot verify
+    original acquisition metadata, agricultural relevance or flood accuracy.
+    """
+    manifest = load_pair_json(root, 'provenance.json')
+    if manifest.get('case') != 'beira-2019-pipeline-case':
+        raise ValueError('Unsupported pair case.')
+    objects = []
+    for role in ('current', 'earlier'):
+        record = manifest.get(role)
+        if not isinstance(record, dict):
+            raise ValueError('Missing crop record.')
+        size, digest = record.get('bytes'), record.get('sha256')
+        if (type(size) is not int or not 0 < size <= MAX_BYTES or
+                not isinstance(digest, str) or re.fullmatch('[a-f0-9]{64}', digest) is None):
+            raise ValueError('Invalid crop fingerprint.')
+        objects.append(inspect_object(root, role + '.tif', {'bytes': size, 'sha256': digest}))
+    result = {'passed': False, 'objects': objects, 'report': 'not_checked',
+              'scope': 'Local manifest consistency and report replay with this installed engine. Not signed upstream authenticity, independent metadata verification or flood-change accuracy.'}
+    if any(row['status'] != 'ok' for row in objects):
+        return result
+    saved = load_pair_json(root, 'report.json')
+    raw, earlier = (bounded_read(cache_path(root, role + '.tif'), MAX_BYTES) for role in ('current', 'earlier'))
+    # Check the exact in-memory bytes too: a file may change after fingerprinting.
+    if any(hashlib.sha256(content).hexdigest() != manifest[role]['sha256']
+           for role, content in (('current', raw), ('earlier', earlier))):
+        raise ValueError('Crop changed while being verified.')
+    dates = []
+    for role in ('current', 'earlier'):
+        properties = manifest[role].get('properties')
+        if not isinstance(properties, dict) or not isinstance(properties.get('datetime'), str):
+            raise ValueError('Missing recorded acquisition date.')
+        dates.append(properties['datetime'][:10])
+    fresh = export_report(run_analysis(raw, name='Beira historical pair — unvalidated change',
+                         observed_on=dates[0], reference_raw=earlier, reference_on=dates[1], same_orbit=True))
+    # Geometry tuples become JSON arrays on disk. Compare the serialized schema,
+    # not Python tuple/list implementation details.
+    fresh = json.loads(json.dumps(fresh, allow_nan=False))
+    # Runtime timing is intentionally variable; all evidence and policy fields are checked.
+    stable = lambda report: {k: v for k, v in report.items() if k not in ('generated_at', 'elapsed_ms')}
+    result['report'] = 'reproduced' if stable(saved) == stable(fresh) else 'mismatch'
+    result['passed'] = result['report'] == 'reproduced'
+    return result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--approve-download', action='store_true', help='Approve public COG window reads and local processing; no AWS account is used.')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--approve-download', action='store_true', help='Approve public COG window reads and local processing; no AWS account is used.')
+    mode.add_argument('--verify', action='store_true', help='Offline crop consistency and report replay only; no downloads or file changes.')
     parser.add_argument('--output', type=Path, default=ROOT / 'data/watertrace-pairs/beira-2019')
     args = parser.parse_args(argv)
     try:
+        if args.verify:
+            verification = verify_pair(args.output)
+            print(json.dumps(verification, indent=2, allow_nan=False))
+            return 0 if verification['passed'] else 1
         if args.approve_download and (args.output.exists() or args.output.is_symlink()):
             raise ValueError('Output directory already exists; choose a new path. Nothing overwritten.')
         with httpx.Client(timeout=45, follow_redirects=False) as client:

@@ -13,6 +13,14 @@ This is a separate historical case, not a new built-in example or an extension o
 
 The default new directory is `data/watertrace-pairs/beira-2019/`, ignored by Git. Existing directories are never overwritten. To rerun, choose a different `--output` path. Files are private on POSIX. A publication failure may leave completed files in the new directory; retain them for diagnosis and use a fresh destination. Nothing is recursively deleted.
 
+Verify the prepared case offline before a demonstration:
+
+```sh
+.venv/bin/python scripts/prepare_watertrace_pair.py --verify
+```
+
+This checks both local crop sizes/SHA-256 against the manifest, then reproduces the saved report with the installed engine. Only generation timestamp and runtime duration are excluded from the comparison; evidence, dates, policies, zones and measurements must agree. It makes no network calls, downloads or file changes. Exit `0` means reproduced, `1` means a crop/report mismatch or missing crop, and `2` means malformed/unreadable inputs or a replay error. `--verify` and `--approve-download` cannot be combined. Symlink inputs, duplicate manifest keys, oversized JSON and invalid fingerprints are rejected. A mismatch after an engine/library update may be a reproducibility change rather than corruption; preserve the original files and investigate, never silently regenerate the manifest. This verifies local consistency, not the authenticity of the manifest or the correctness of original acquisition metadata.
+
 Upload `current.tif` dated **2019-03-26**, with `earlier.tif` dated **2019-03-02**. Consult `provenance.json` before confirming matching acquisitions. Select **Paired change evidence** or **Radar · VV → Compare radar dates**. The wipe uses identical grids and a fixed backscatter scale, without a misleading current-water overlay on the earlier image. The queue always describes current observations.
 
 ## Provenance and selection
