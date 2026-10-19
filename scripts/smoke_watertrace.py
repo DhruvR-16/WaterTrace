@@ -24,12 +24,33 @@ def main():
                 time.sleep(1)
         assert health.json()['opencv'].startswith('5.')
         assert health.json()['cool_verified'] is False
+        page = client.get('/')
+        page.raise_for_status()
+        assert 'WaterTrace' in page.text and 'id="getting-started"' in page.text
+        for asset in ('style.css', 'model.js', 'app.js', 'favicon.svg'):
+            served = client.get('/static/' + asset)
+            served.raise_for_status()
+            assert served.content
         response=client.post('/api/analyze',files={'current':('synthetic.tif',raw,'image/tiff')},data={'observed_on':'2020-01-01'})
         response.raise_for_status();result=response.json()
         assert result['source']['width']==96 and result['source']['height']==64
         assert len(result['zones'])==9 and result['summary']['water_observed_ha']>0
         assert result['reference'] is None
         assert 'default-src' in response.headers['content-security-policy']
+        assert "'unsafe-inline'" not in response.headers['content-security-policy']
+        # Identical synthetic observations on separate dates exercise paired
+        # processing, not real-world change accuracy or continuous duration.
+        pair = client.post('/api/analyze', files={
+            'current': ('current.tif', raw, 'image/tiff'),
+            'reference': ('earlier.tif', raw, 'image/tiff'),
+        }, data={'observed_on': '2020-01-02', 'reference_on': '2020-01-01', 'same_orbit': 'true'})
+        pair.raise_for_status()
+        paired = pair.json()
+        assert paired['reference'] is not None
+        assert paired['images']['earlier'] and paired['images']['change']
+        assert paired['summary']['water_observed_ha'] == result['summary']['water_observed_ha']
+        assert client.post('/api/analyze', headers={'Origin': 'https://untrusted.example'},
+                           files={'current': ('synthetic.tif', raw)}).status_code == 403
         assert client.post('/api/analyze',files={'current':('bad.tif',b'not a raster')}).status_code==422
         zones={'type':'FeatureCollection','features':[{'type':'Feature',
             'properties':{'id':'field','name':'खेत 🌾'},'geometry':result['zones'][0]['geometry']}]}
@@ -42,7 +63,9 @@ def main():
         recovered.raise_for_status()
         assert recovered.json()['zones'][0]['name']=='खेत 🌾'
         assert client.get('/api/health',headers={'Host':'untrusted.example'}).status_code==400
-    print('WaterTrace HTTP smoke passed: raster decoding, malformed-input recovery, Unicode and host bounds.')
+    print('WaterTrace HTTP smoke passed: dashboard assets, single/paired raster processing, '
+          'malformed-input recovery, Unicode, CSP, origin and host bounds. '
+          'Synthetic pipeline check only; not browser QA or AWS deployment evidence.')
 
 
 if __name__=='__main__':main()

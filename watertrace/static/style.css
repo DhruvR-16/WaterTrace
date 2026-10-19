@@ -116,6 +116,7 @@ select { max-width:100%; min-height:36px; border:1px solid #c9d8df; border-radiu
 .map-stack img { position:absolute; width:100%; height:100%; object-fit:fill; inset:0; }
 .map-stack #satellite { position:relative; display:block; width:100%; height:auto; }
 .map-stack #evidence { opacity:.8; pointer-events:none; }
+.map-stack #comparison-earlier { pointer-events:none; }
 .map-stack svg { position:absolute; inset:0; width:100%; height:100%; }
 .map-stack polygon { cursor:pointer; fill:#c0ecb310; stroke:#f0f7eb; stroke-width:1.3; vector-effect:non-scaling-stroke; }
 .map-stack polygon:hover,.map-stack polygon.selected { fill:#e4f4b830; stroke:#e4f4b8; stroke-width:2.5; }

@@ -53,6 +53,17 @@ def test_dashboard_exposes_all_six_change_categories():
     assert slider['aria-label']
 
 
+def test_markup_does_not_require_unsafe_inline_content_security_policy():
+    elements = Elements((ROOT / 'index.html').read_text()).elements
+    for tag, attrs in elements:
+        assert 'style' not in attrs
+        assert not any(name.startswith('on') for name in attrs)
+        if tag == 'script':
+            assert attrs.get('src', '').startswith('/static/')
+    css = (ROOT / 'style.css').read_text()
+    assert re.search(r'#comparison-earlier\s*\{[^}]*pointer-events:none', css)
+
+
 def test_guided_workspace_has_empty_state_and_progressive_technical_controls():
     elements = Elements((ROOT / 'index.html').read_text()).elements
     attrs_by_id = {attrs['id']: attrs for _, attrs in elements if 'id' in attrs}
