@@ -20,7 +20,7 @@ def test_http_branding_and_static_module_are_consistent():
         assert 'FieldWatch' not in html
         assert 'Inundra' not in html
         assert client.get('/openapi.json').json()['info']['title'] == 'WaterTrace'
-        assert client.get('/api/health').json()['version'] == __version__ == '0.9.0'
+        assert client.get('/api/health').json()['version'] == __version__
         assert 'root.WaterTraceModel=api' in client.get('/static/model.js').text
         assert 'window.WaterTraceModel' in client.get('/static/app.js').text
 
