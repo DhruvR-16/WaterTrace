@@ -107,6 +107,20 @@ The initial fixed policy was evaluated on all **90 chips in the Sen1Floods11 v1.
 
 ## Verify and reproduce
 
+For an interview-ready verification path, after setup run `make verify` (offline
+software checks). After downloading the test split, run
+`make reproduce OUT=artifacts/interview-run` with a new output directory. This
+verifies cached bytes, reruns all four methods and produces an event-clustered
+[uncertainty audit](docs/WATERTRACE_UNCERTAINTY.md). It reproduces an exposed
+benchmark, not a new blind test. See the [engineering case studies](docs/WATERTRACE_ENGINEERING.md)
+for design decisions, failure modes and test references.
+The [operations record](docs/WATERTRACE_OPERATIONS.md) includes measured local CLI
+timing/memory and explicit deployment gates; these are not cloud benchmarks.
+
+GitHub Actions is disabled by owner request. The retained verification workflow
+has only a manual trigger if Actions is deliberately re-enabled later; pushes
+and pull requests no longer trigger it. Local verification remains available.
+
 ```sh
 .venv/bin/python -m pip install -r requirements-dev.txt
 .venv/bin/python -m pytest -q

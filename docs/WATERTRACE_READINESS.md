@@ -13,7 +13,9 @@ The Sites local-preview guidance informed browser verification and responsive la
 
 ## Local verification record
 
-Latest local suite: **306 Python tests and 80 JavaScript tests passed** after the deployment-readiness patch; dependency consistency and Compose configuration validation passed. Container execution and fresh browser visual QA remain unverified.
+Latest local suite: **323 Python tests and 80 JavaScript tests passed** after the credibility audit; dependency consistency passed. Compose configuration validation previously passed. Container execution and fresh browser visual QA remain unverified.
+
+- Credibility audit: added an offline four-method uncertainty audit with 2,000 whole-event bootstrap replicates, explicit undefined ratios and non-overwriting output. Protocol committed before execution. All 90 exposed chips reproduced unchanged after checking 181 cache objects; no new blind evaluation is claimed. Added `make verify`, `make reproduce`, engineering case studies and a three-run local CLI timing/memory record. GitHub Actions was disabled through the repository setting at the owner's request, and automatic push/PR triggers were removed. Reviewer recruitment/studies are excluded at the owner's request. AWS, independent temporal truth and a new-event learned-model comparison remain unfinished; no production inference change occurred.
 
 - Deployment-readiness patch: moved the comparison image's inline style to the same-origin stylesheet, preserving the strict CSP; a markup contract test now rejects inline styles and event handlers. The Sites local workflow guided this scoped UI fix. Expanded the live HTTP smoke check to cover dashboard assets, synthetic single/paired processing, malformed-input recovery and origin/host/CSP protections. All nine synthetic exercises passed and the Beira report reproduced offline. AWS is now requested, pending account/profile, region and spending cap. The AWS CLI and Session Manager plugin are absent; Docker execution remains unavailable. No cloud resources were created and no scientific-performance change is claimed.
 
