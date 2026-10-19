@@ -10,6 +10,9 @@ function svgElement(tag,attrs) {const el=document.createElementNS('http://www.w3
 function message(text) {$('message').textContent=text;$('message').hidden=!text;}
 function busy(active) {
   $('busy').hidden=!active;
+  $('next-zone').disabled=active||!state.report||M.reviewPlan(state.report,state.reviews).pending===0;
+  $('start-upload').disabled=active;
+  $('try-example').disabled=active||![...document.querySelectorAll('.example')].some(b=>b.dataset.available==='true');
   $('main-content').setAttribute('aria-busy',String(active));
   document.querySelectorAll('.example,.lab-card,#upload-button,#export-button,#geojson-export-button,#restore-button,#draw-button,#import-button').forEach(el=>el.disabled=active || (['export-button','geojson-export-button','restore-button','draw-button','import-button'].includes(el.id)&&!state.report));
   $('draw-button').disabled=active || !!state.lab || !state.report || state.report.source.crs!=='EPSG:4326';
@@ -19,6 +22,7 @@ function clearReport() {
   state.report=null;state.acceptedInputs=null;state.selected=null;state.reviews=Object.create(null);state.reviewsDirty=false;state.filter='all';
   $('lab-result').hidden=true;$('lab-legend').hidden=true;$('normal-legend').hidden=false;
   $('change-legend').hidden=true;
+  $('analysis-content').hidden=true;$('getting-started').hidden=false;
   $('session-state').textContent='No accepted observation';$('review-progress').textContent='No zones to review';
   ['water-value','unknown-value','coverage-value','date-value'].forEach(id=>$(id).textContent='—');
   $('map-stack').hidden=true;$('map-placeholder').hidden=false;$('zone-detail').hidden=true;
@@ -67,7 +71,7 @@ async function analyze() {
       $('map-caption').textContent='Synthetic rejection exercise. No measured scene summary or field conclusion is available.';
       return;
     }
-    state.report=M.validateResult(result);state.selected=result.zones[0]?.id;rendering=true;render();state.acceptedInputs=inputs;
+    state.report=M.validateResult(result);state.selected=M.reviewPlan(result).next_zone_id;rendering=true;render();state.acceptedInputs=inputs;
   }catch(error){
     const reason=controller.signal.aborted?(timedOut?'Analysis timed out. The server may still finish.':'Stopped waiting. The server may still finish.'):rendering?'The response could not be displayed.':error instanceof TypeError?'Cannot reach the local service. Start WaterTrace and retry.':error.message;
     clearReport();
@@ -88,6 +92,10 @@ async function analyze() {
 }
 function render() {
   const r=state.report;
+  $('analysis-content').hidden=false;$('getting-started').hidden=true;
+  const explanation=M.sceneExplanation(r);
+  $('result-title').textContent=explanation.title;$('result-explanation').textContent=explanation.detail;
+  $('boundary-notice').textContent=`Review boundaries: ${r.zone_basis}. Zone areas may overlap; do not add them as unique affected land.`;
   $('water-value').textContent=M.areaLabel(r.summary.water_observed_ha);$('unknown-value').textContent=M.areaLabel(r.summary.uncertain_ha);
   $('coverage-value').textContent=percent(r.summary.assessed_fraction);$('date-value').textContent=r.source.observed_on||'Not supplied';
   $('source-caption').textContent=r.context?'Historical · Sentinel-1':'User-supplied acquisition';$('scene-title').textContent=r.name;
@@ -139,7 +147,8 @@ function renderZones() {
   const r=state.report;if(!r)return;
   renderReviewProgress();
   document.querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===state.filter)));
-  const filtered=r.zones.filter(z=>state.filter==='all'||z.status===state.filter);
+  const plan=M.reviewPlan(r,state.reviews),byId=new Map(r.zones.map(z=>[z.id,z]));
+  const filtered=plan.ordered_zones.map(row=>byId.get(row.zone_id)).filter(z=>state.filter==='all'||z.status===state.filter);
   $('zone-list').replaceChildren(...filtered.map(zone=>{
     const button=element('button',undefined,'zone-card');button.dataset.status=zone.status;button.setAttribute('aria-pressed',String(zone.id===state.selected));
     const title=element('div',undefined,'zone-line');title.append(element('span',zone.name),element('span',M.statuses[zone.status],'status-label'));
@@ -148,6 +157,7 @@ function renderZones() {
     const annotation=state.reviews[zone.id];
     const reviewLabel=annotation?(annotation.outcome==='unreviewed'?(annotation.note.trim()?' · note only':' · not reviewed'):' · reviewer decision'):'';
     button.append(title,bar,element('small',`${M.areaLabel(zone.water_observed_ha)} ha water · ${percent(1-zone.coverage)} uncertain${reviewLabel}`));
+    button.append(element('span',M.gateNames[zone.decision?.level]||'Review available evidence','zone-next-step'));
     button.addEventListener('click',()=>selectZone(zone.id));return button;
   }));
   if(!filtered.length)$('zone-list').append(element('p','No zones in this queue.','empty'));
@@ -173,6 +183,10 @@ function renderReviewProgress(){
   const session=state.reviewsDirty?'Unexported notes · export before leaving':'Session ready · review and export';
   if($('review-progress').textContent!==progress)$('review-progress').textContent=progress;
   if($('session-state').textContent!==session)$('session-state').textContent=session;
+  const plan=M.reviewPlan(state.report,state.reviews),next=plan.ordered_zones.find(z=>!z.reviewed);
+  $('next-zone').disabled=!!state.controller||!next;
+  $('next-action-title').textContent=next?next.title:'Every zone has a reviewer decision';
+  $('next-action-copy').textContent=next?next.next_step:'Export your review and verify the downloaded file. Reviewer decisions remain unverified annotations.';
 }
 function captureReviewDraft(){
   if(!state.report || state.selected==null)return;
@@ -191,7 +205,17 @@ function confirmReviewReplacement(action='analysis'){
 window.addEventListener('beforeunload',event=>{
   captureReviewDraft();if(state.reviewsDirty||state.pendingReview?.reviewsDirty){event.preventDefault();event.returnValue='';}
 });
-function selectZone(id){captureReviewDraft();state.selected=id;renderZones();renderDetail();}
+function selectZone(id){captureReviewDraft();state.selected=id;renderZones();renderDetail();$('zone-detail').scrollIntoView?.({behavior:'auto',block:'nearest'});$('zone-detail').focus?.({preventScroll:true});}
+function setQueueFilter(filter){
+  if(!state.report||state.controller||!['all','inspect_water','resolve_uncertainty'].includes(filter))return;
+  captureReviewDraft();state.filter=filter;
+  const matching=state.report.zones.filter(z=>filter==='all'||z.status===filter);
+  if(!matching.some(z=>z.id===state.selected)){
+    const ids=new Set(matching.map(z=>z.id));
+    state.selected=M.reviewPlan(state.report,state.reviews).ordered_zones.find(z=>ids.has(z.zone_id))?.zone_id??null;
+  }
+  renderZones();renderDetail();
+}
 function renderDetail(){
   const r=state.report,z=r?.zones.find(z=>z.id===state.selected);$('zone-detail').hidden=!z;if(!z)return;
   $('detail-title').textContent=z.name;$('detail-reason').textContent=z.reasons.join(' ');
@@ -225,7 +249,14 @@ $('finish-draw').addEventListener('click',()=>{try{const features=state.zones?.f
 $('cancel-draw').addEventListener('click',()=>{stopDrawing();message('');});
 $('import-button').addEventListener('click',()=>$('geojson-file').click());
 $('geojson-file').addEventListener('change',async event=>{const file=event.target.files[0],report=state.report;event.target.value='';if(!file)return;try{if(file.size>200000)throw new Error('Use a GeoJSON file under 200 KB.');const value=JSON.parse(await file.text());if(!value||value.type!=='FeatureCollection'||!Array.isArray(value.features))throw new Error('Import a GeoJSON FeatureCollection.');if(state.report!==report||state.controller)throw new Error('Observation changed while reading the file. Choose it again.');if(!confirmReviewReplacement())return;state.zones=value;await analyze();}catch(error){message(error.message);}});
-$('save-review').addEventListener('click',()=>{captureReviewDraft();renderZones();message('Review saved in this browser session. Export it before closing. The algorithmic findings are unchanged.');});
+$('save-review').addEventListener('click',()=>{
+  if(!state.report||state.controller)return;
+  captureReviewDraft();renderZones();
+  if($('review-outcome').value==='unreviewed'){message('Note saved in this session. Choose a reviewer decision to continue; a note alone does not complete the review. Export before closing.');return;}
+  const next=M.reviewPlan(state.report,state.reviews).next_zone_id;
+  if(next!==null){state.filter='all';selectZone(next);message('Decision saved in this session. Showing the next zone without a reviewer decision. Export before closing.');}
+  else message('Every zone has a reviewer decision. Export review & notes, then verify the downloaded file. This does not validate the findings.');
+});
 $('export-button').addEventListener('click',()=>{if(!state.report)return;captureReviewDraft();const value=M.reviewExport(state.report,state.reviews);const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'}));const link=element('a');link.href=url;link.download=`watertrace-review-${state.report.source.sha256.slice(0,12)}.json`;link.click();state.reviewsDirty=false;renderReviewProgress();$('session-state').textContent='Export requested · verify your download';message('Export requested. Verify the downloaded file before leaving. Locations and human notes may be sensitive.');setTimeout(()=>URL.revokeObjectURL(url),1000);});
 $('geojson-export-button').addEventListener('click',()=>{
   if(!state.report||state.controller)return;
@@ -252,8 +283,11 @@ $('review-file').addEventListener('change',async event=>{
 });
 $('view-select').addEventListener('change',renderView);$('evidence-toggle').addEventListener('change',renderView);$('zones-toggle').addEventListener('change',renderZones);
 $('comparison-toggle').addEventListener('change',renderView);$('comparison-position').addEventListener('input',renderView);
+$('next-zone').addEventListener('click',()=>{if(!state.report||state.controller)return;captureReviewDraft();const next=M.reviewPlan(state.report,state.reviews).next_zone_id;if(next!==null){state.filter='all';selectZone(next);}});
+$('start-upload').addEventListener('click',()=>$('upload-dialog').showModal());
+$('try-example').addEventListener('click',()=>[...document.querySelectorAll('.example')].find(b=>b.dataset.available==='true')?.click());
 $('review-note').addEventListener('input',captureReviewDraft);$('review-outcome').addEventListener('change',captureReviewDraft);
-document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{state.filter=button.dataset.filter;renderZones();}));
+document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>setQueueFilter(button.dataset.filter)));
 $('cancel-button').addEventListener('click',()=>state.controller?.abort());
 $('method-button').addEventListener('click',()=>$('method-dialog').showModal());$('upload-button').addEventListener('click',()=>$('upload-dialog').showModal());
 document.querySelectorAll('.close-dialog').forEach(button=>button.addEventListener('click',()=>button.closest('dialog').close()));
@@ -266,9 +300,9 @@ $('upload-form').addEventListener('submit',event=>{event.preventDefault();const 
 });
 async function init(){
   try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);let examples;try{examples=await fetchJSON('/api/examples',{signal:controller.signal});}finally{clearTimeout(timer);}
-    $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.dataset.exampleId=item.id;button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',item.date));button.append(caption);button.addEventListener('click',()=>{if(!confirmReviewReplacement())return;state.example=item.id;state.lab=null;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
-    if(examples.some(item=>item.available))document.querySelectorAll('.example')[examples.findIndex(item=>item.available)].click();
-    else message('The public demo has not been downloaded. Run: python scripts/fetch_watertrace_data.py --split demo. You can also upload your own calibrated radar.');
+    $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.dataset.exampleId=item.id;button.dataset.available=String(item.available);button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',item.date));button.append(caption);button.addEventListener('click',()=>{if(!confirmReviewReplacement())return;state.example=item.id;state.lab=null;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
+    busy(false);
+    if(!examples.some(item=>item.available))message('The public demo has not been downloaded. Run: python scripts/fetch_watertrace_data.py --split demo. You can also upload your own calibrated radar.');
   }catch(error){message('Cannot load examples. Start the WaterTrace service and reload this page.');}
 }
 function renderLab(lab,rejection=''){

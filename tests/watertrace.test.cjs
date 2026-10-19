@@ -537,3 +537,90 @@ test('clearing a note and decision does not leave a reviewed badge',async()=>{
   assert.match(ui.get('zone-list').children[0].children[2].textContent,/not reviewed/);
   assert.doesNotMatch(ui.get('zone-list').children[0].children[2].textContent,/reviewer decision|note only/);
 });
+
+test('review plan puts evidence gaps first without changing measurements or input order',()=>{
+  const report=reviewFixture();
+  report.zones=['water_candidate','low_signal','baseline_required','insufficient_evidence','context_required','repeat_observation'].map((level,i)=>({id:String(i),decision:{level,next_step:level}}));
+  const before=JSON.stringify(report),plan=model.reviewPlan(report);
+  assert.deepEqual(plan.ordered_zones.map(z=>z.gate),['insufficient_evidence','baseline_required','context_required','water_candidate','repeat_observation','low_signal']);
+  assert.equal(plan.next_zone_id,'3');assert.equal(plan.pending,6);
+  assert.equal(JSON.stringify(report),before);assert.match(plan.scope,/not flood severity/);
+  assert.equal(model.reviewPlan(report,{'3':{outcome:'unreviewed',note:'note only'}}).next_zone_id,'3');
+  assert.equal(model.reviewPlan(report,{'3':{outcome:'follow_up'}}).next_zone_id,'2');
+});
+
+test('missing gates and prototype-like IDs cannot be classified as low risk or already reviewed',()=>{
+  const report={zones:[{id:'__proto__'},{id:'x',decision:{level:'low_signal'}}]};
+  const plan=model.reviewPlan(report,{});
+  assert.equal(plan.next_zone_id,'__proto__');assert.equal(plan.counts.unknown_gate,1);
+  assert.equal(plan.pending,2);assert.equal(model.reviewPlan({zones:[]}).next_zone_id,null);
+});
+
+test('scene explanations distinguish single-date, missing baseline and no-signal evidence',()=>{
+  const report={summary:{water_observed_ha:1},reference:null};
+  assert.match(model.sceneExplanation(report).detail,/Only one date/);
+  report.reference={};report.temporal_support={observed_water_baseline_complete:false};
+  assert.match(model.sceneExplanation(report).detail,/no usable earlier evidence/);
+  report.summary.water_observed_ha=0;
+  assert.match(model.sceneExplanation(report).detail,/does not rule out/);
+});
+
+test('next-zone action preserves draft and resets a restrictive queue filter',async()=>{
+  const ui=await reviewUI();ui.run("state.report.zones[1].decision={level:'baseline_required',next_step:'Get earlier data',reasons:[]};state.filter='resolve_uncertainty'");
+  ui.get('review-note').value='Preserve my draft';ui.get('next-zone').click();
+  assert.equal(ui.run('state.selected'),'a'); // Unknown gate fails closed before known gates.
+  assert.equal(ui.run('state.reviews.a.note'),'Preserve my draft');
+  ui.run("state.report.zones[0].decision={level:'water_candidate',next_step:'Cross-check',reasons:[]}");
+  ui.get('next-zone').click();assert.equal(ui.run('state.selected'),'b');
+  assert.equal(ui.run('state.filter'),'all');
+});
+
+test('queue filtering keeps detail selection consistent and preserves notes',async()=>{
+  const ui=await reviewUI();ui.run("state.report.zones[1].status='resolve_uncertainty'");
+  ui.get('review-note').value='Draft for a';ui.run("setQueueFilter('resolve_uncertainty')");
+  assert.equal(ui.run('state.selected'),'b');assert.equal(ui.run('state.reviews.a.note'),'Draft for a');
+  assert.equal(ui.get('detail-title').textContent,'b');
+  ui.run("state.report.zones[1].status='inspect_water';setQueueFilter('resolve_uncertainty')");
+  assert.equal(ui.run('state.selected'),null);assert.equal(ui.get('zone-detail').hidden,true);
+});
+
+test('save and continue does not count note-only work as a completed decision',async()=>{
+  const ui=await reviewUI();ui.get('review-note').value='Need local context';ui.get('save-review').click();
+  assert.equal(ui.run('state.selected'),'a');assert.match(ui.get('message').textContent,/note alone/);
+  ui.get('review-outcome').value='follow_up';ui.get('save-review').click();
+  assert.equal(ui.run('state.selected'),'b');assert.equal(ui.run('state.reviews.a.note'),'Need local context');
+  ui.get('review-outcome').value='false_alarm';ui.get('save-review').click();
+  assert.match(ui.get('message').textContent,/Every zone has/);
+  assert.equal(ui.get('next-zone').disabled,true);
+});
+
+test('export includes versioned guidance but restoration still uses original evidence',async()=>{
+  const ui=await reviewUI();ui.get('export-button').click();
+  const output=JSON.parse(await ui.captured.blob.text());
+  assert.equal(output.review_guidance.policy,'evidence-review-order-v1');
+  assert.equal(output.review_guidance.total,2);
+  assert.doesNotThrow(()=>model.restoreReviews(ui.context.fixture,output));
+});
+
+test('guided workspace hides stale result explanation when cleared',async()=>{
+  const ui=await reviewUI();ui.run('render()');
+  assert.equal(ui.get('analysis-content').hidden,false);assert.equal(ui.get('getting-started').hidden,true);
+  ui.run('clearReport()');
+  assert.equal(ui.get('analysis-content').hidden,true);assert.equal(ui.get('getting-started').hidden,false);
+});
+
+test('loading the observation library never starts an analysis automatically',async()=>{
+  const ui=await reviewUI(),calls=[];
+  ui.context.fetch=async url=>{calls.push(url);return {ok:true,json:async()=>[{id:'india',title:'India',date:'2020-01-10',available:true}]};};
+  await ui.run('init()');
+  assert.deepEqual(calls,['/api/examples']);assert.equal(ui.run('state.report===fixture'),true);
+  assert.equal(ui.get('try-example').disabled,false);
+});
+
+test('practice summaries retain synthetic and evidence-limit disclosures',()=>{
+  const report={summary:{water_observed_ha:1},reference:null,lab:{kind:'synthetic'},zones:[{decision:{level:'insufficient_evidence'}}]};
+  const explanation=model.sceneExplanation(report);
+  assert.match(explanation.title,/Practice result/);
+  assert.match(explanation.detail,/not an actual satellite observation/);
+  assert.match(explanation.detail,/1 review zone/);
+});

@@ -53,6 +53,19 @@ def test_dashboard_exposes_all_six_change_categories():
     assert slider['aria-label']
 
 
+def test_guided_workspace_has_empty_state_and_progressive_technical_controls():
+    elements = Elements((ROOT / 'index.html').read_text()).elements
+    attrs_by_id = {attrs['id']: attrs for _, attrs in elements if 'id' in attrs}
+    assert 'hidden' in attrs_by_id['analysis-content']
+    assert 'hidden' not in attrs_by_id['getting-started']
+    assert attrs_by_id['zone-detail']['tabindex'] == '-1'
+    assert 'next-zone' in attrs_by_id and 'result-explanation' in attrs_by_id
+    advanced = [attrs for tag, attrs in elements if tag == 'details' and
+                ('advanced-tools' in attrs.get('class', '') or 'technical-details' in attrs.get('class', ''))]
+    assert len(advanced) == 3
+    assert all('open' not in attrs for attrs in advanced)
+
+
 @pytest.mark.parametrize('foreground,background', [
     ('142d36', 'ffffff'), ('526871', 'ffffff'), ('526871', 'eef3f5'),
     ('adc5ce', '102b35'), ('e0eef2', '254752'), ('102b35', 'b8ec75'),

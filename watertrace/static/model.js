@@ -14,11 +14,43 @@
   }
   function reviewExport(report, reviews) {
     const {images, ...rest} = report;
-    return {...rest, human_reviews: Object.entries(reviews).filter(([id]) => report.zones.some(z => z.id === id)).map(([zone_id, review]) => ({zone_id,...review})),
+    return {...rest, review_guidance:reviewPlan(report,reviews), human_reviews: Object.entries(reviews).filter(([id]) => report.zones.some(z => z.id === id)).map(([zone_id, review]) => ({zone_id,...review})),
       review_notice:'Human notes are unverified reports, separate from algorithmic findings. Locations and notes may be sensitive.'};
   }
   function reviewChanged(existing, outcome, note) {
     return (existing?.outcome || 'unreviewed')!==outcome || (existing?.note || '')!==note;
+  }
+  const gateNames={insufficient_evidence:'Get better coverage',baseline_required:'Find earlier evidence',
+    context_required:'Check crop context',water_candidate:'Cross-check water signal',
+    repeat_observation:'Check longer water history',low_signal:'Check reported impacts'};
+  function reviewPlan(report,reviews={}) {
+    const order=Object.keys(gateNames),counts=Object.fromEntries(order.map(k=>[k,0]));
+    const rows=report.zones.map((zone,index)=>{
+      const gate=Object.hasOwn(gateNames,zone.decision?.level)?zone.decision.level:'unknown_gate';
+      counts[gate]=(counts[gate]||0)+1;
+      const reviewed=Object.hasOwn(reviews,zone.id)&&['water_confirmed','false_alarm','follow_up'].includes(reviews[zone.id]?.outcome);
+      return {zone_id:zone.id,gate,title:gateNames[gate]||'Review available evidence',
+        next_step:zone.decision?.next_step||'Inspect the source, uncertainty and local context before interpreting this zone.',
+        reviewed,index};
+    });
+    // Missing/unsupported gates come first, not last; never interpret them as low risk.
+    rows.sort((a,b)=>order.indexOf(a.gate)-order.indexOf(b.gate)||a.index-b.index);
+    const pending=rows.filter(r=>!r.reviewed);
+    return {policy:'evidence-review-order-v1',scope:'Suggested evidence-review order, not flood severity, field safety or dispatch priority.',
+      counts,total:rows.length,pending:pending.length,next_zone_id:pending[0]?.zone_id??null,
+      ordered_zones:rows.map(({index,...row})=>row)};
+  }
+  function sceneExplanation(report) {
+    const water=report.summary.water_observed_ha>0;
+    let title=water?'Water-like signals need a human cross-check':'No substantial water signal is shown';
+    let detail=water?'This is a screening result, not confirmed flooding or crop damage.':'This does not rule out flooding, hidden water or reported impacts.';
+    if(!report.reference)detail+=' Only one date is available: new flooding cannot be established.';
+    else if(report.temporal_support?.observed_water_baseline_complete===false)detail+=' Some current water has no usable earlier evidence; it cannot be called new or repeated water.';
+    else detail+=' The two dates can be compared, but conditions between them are unknown.';
+    const limited=(report.zones||[]).filter(z=>z.decision?.level==='insufficient_evidence').length;
+    if(limited)detail+=` ${limited} review zone(s) need better coverage or resolution before a whole-zone interpretation.`;
+    if(report.lab?.kind==='synthetic'){title='Practice result: '+title.toLowerCase();detail='Generated exercise, not an actual satellite observation. '+detail;}
+    return {title,detail};
   }
   function geojsonExport(report, reviews={}) {
     const features=report.zones.map(zone=>{
@@ -93,7 +125,7 @@
     while(taken.has('drawn-'+index))index++;
     return {type:'Feature',properties:{id:'drawn-'+index,name:'Drawn review zone '+index,crop:'unknown'},geometry:{type:'Polygon',coordinates:[ring]}};
   }
-  const api={statuses,areaLabel,validateResult,reviewExport,geojsonExport,reviewChanged,restoreReviews,pixelToGeo,featureFromPoints};
+  const api={statuses,gateNames,reviewPlan,sceneExplanation,areaLabel,validateResult,reviewExport,geojsonExport,reviewChanged,restoreReviews,pixelToGeo,featureFromPoints};
   if (typeof module !== 'undefined' && module.exports) module.exports=api;
   else root.WaterTraceModel=api;
 })(typeof window !== 'undefined' ? window : globalThis);
