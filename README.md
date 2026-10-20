@@ -129,6 +129,12 @@ for design decisions, failure modes and test references.
 The [operations record](docs/WATERTRACE_OPERATIONS.md) includes measured local CLI
 timing/memory and explicit deployment gates; these are not cloud benchmarks.
 
+Evaluation reports record both radar and label SHA-256 digests from the exact
+bytes decoded, the manifest digest, and Python/OpenCV/NumPy/Rasterio/GDAL versions.
+Evaluation and uncertainty-audit outputs are published as complete private files
+without replacing an existing file or symlink. This establishes local
+reproducibility, not label authenticity or new scientific validation.
+
 GitHub Actions is disabled by owner request. The retained verification workflow
 has only a manual trigger if Actions is deliberately re-enabled later; pushes
 and pull requests no longer trigger it. Local verification remains available.

@@ -40,6 +40,11 @@ The output directory must be new and its parent must exist. No network requests
 or cloud resources are needed for these commands. The audit consumes the complete
 four-method evaluator report and records its SHA-256. This is local consistency,
 not independent authentication. Retain the evaluation JSON alongside the audit.
+Both commands publish complete private reports without overwriting existing
+paths, using same-directory staging and exclusive hard links. A handled publication
+failure removes staging and leaves no partial destination. Hard-link support is
+required; crash leftovers and power-loss durability have the same limitations
+as CLI exports documented in the README.
 
 ## Recorded results — 19 October 2026
 
