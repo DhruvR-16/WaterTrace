@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import platform
 import sys
 import time
 
@@ -15,6 +16,8 @@ sys.path.insert(0, str(ROOT))
 import numpy as np
 import cv2
 import rasterio
+from rasterio.io import MemoryFile
+from watertrace.cli import save_report
 from watertrace.engine import POLICY, InvalidRaster, classify, otsu_db, read_raster
 
 
@@ -50,15 +53,20 @@ def experimental_baselines(raster):
 
 def evaluate(data, split, *, experiments=False):
     manifest_path = data / (split+"-manifest.json")
-    manifest = json.loads(manifest_path.read_text())
+    manifest_raw = manifest_path.read_bytes()
+    manifest = json.loads(manifest_raw)
+    if not manifest.get("pairs"):
+        raise ValueError("Evaluation requires at least one image/label pair.")
     records = []
     started = time.perf_counter()
     for image, label in manifest["pairs"]:
         raw = (data/"data/flood_events/HandLabeled/S1Hand"/image).read_bytes()
-        with rasterio.open(data/"data/flood_events/HandLabeled/LabelHand"/label) as src:
+        label_raw = (data/"data/flood_events/HandLabeled/LabelHand"/label).read_bytes()
+        # Decode the exact bytes whose digest is recorded, not a second disk read.
+        with MemoryFile(label_raw) as memory, memory.open() as src:
             truth = src.read(1)
             label_crs, label_transform = src.crs, src.transform
-        with rasterio.open(data/"data/flood_events/HandLabeled/S1Hand"/image) as src:
+        with MemoryFile(raw) as memory, memory.open() as src:
             if truth.shape != (src.height, src.width) or src.crs != label_crs or not src.transform.almost_equals(label_transform, precision=1e-10):
                 raise ValueError("Label alignment mismatch")
         rejection = None
@@ -76,6 +84,7 @@ def evaluate(data, split, *, experiments=False):
             baseline = baseline_valid = np.zeros(truth.shape, bool)
             experimental = {k: (baseline, baseline_valid) for k in ('filtered_vh_otsu', 'filtered_dual_otsu')} if experiments else {}
         records.append({"image":image, "sha256":hashlib.sha256(raw).hexdigest(), "event":image.split("_")[0],
+                        "label":label, "label_sha256":hashlib.sha256(label_raw).hexdigest(),
                         "rejection":rejection,
                         "watertrace":metrics(classes==2,truth,classes!=0), "vh_otsu":metrics(baseline,truth,baseline_valid)})
         records[-1].update({k: metrics(prediction, truth, assessed) for k, (prediction, assessed) in experimental.items()})
@@ -84,22 +93,31 @@ def evaluate(data, split, *, experiments=False):
         return {method:rates({key:sum(r[method][key] for r in rows) for key in rows[0][method]}) for method in methods}
     return {"policy":POLICY, "split":split, "chips":len(records), "rejected_chips":sum(r["rejection"] is not None for r in records), "scope":"Water/no-water labels, not flood onset, agricultural impact, or inspection success.",
             "protocol":"NoData truth excluded only during scoring. Unknown predictions count as negatives in full recall/IoU. Rejected scenes are entirely unknown for all methods and remain in scoring. Baseline is unfiltered VH Otsu under the same input-admission policy." + (" Diagnostic ablations: fixed 3x3 median and valid-neighborhood erosion; unbounded Otsu on VH or agreement of VV and VH. No margin or component filtering. Exposed-test exploratory comparison, not blind validation or a learned-model benchmark." if experiments else ''),
-            "manifest_sha256":hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+            "manifest_sha256":hashlib.sha256(manifest_raw).hexdigest(),
+            "runtime":{"python":platform.python_version(), "opencv":cv2.__version__,
+                       "numpy":np.__version__, "rasterio":rasterio.__version__,
+                       "gdal":rasterio.__gdal_version__},
             "pooled":summary(records), "by_event":{event:summary([r for r in records if r["event"]==event]) for event in sorted({r["event"] for r in records})},
             "elapsed_seconds":round(time.perf_counter()-started,3), "cases":records}
 
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--split", choices=["demo","valid","test"], default="test")
     parser.add_argument("--data", type=Path, default=ROOT/"data/watertrace")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--experiments", action="store_true", help="Include fixed median-filtered VH and dual-band Otsu diagnostic ablations. Does not change inference.")
-    args = parser.parse_args()
-    report = evaluate(args.data, args.split, experiments=args.experiments)
-    if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        with args.output.open("x") as output:
-            json.dump(report, output, indent=2, allow_nan=False)
-            output.write("\n")
+    args = parser.parse_args(argv)
+    try:
+        report = evaluate(args.data, args.split, experiments=args.experiments)
+        if args.output:
+            payload = json.dumps(report, indent=2, allow_nan=False) + "\n"
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            save_report(args.output, payload)
+    except (OSError, ValueError) as exc:
+        parser.exit(2, f"Evaluation failed: {exc}\n")
     print(json.dumps({k:v for k,v in report.items() if k != "cases"}, indent=2, allow_nan=False))
+
+
+if __name__ == "__main__":
+    main()

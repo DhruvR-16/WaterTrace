@@ -96,3 +96,21 @@ def test_cli_refuses_to_overwrite_prior_evidence(tmp_path):
     run = subprocess.run([sys.executable, str(PATH), str(source), '--output', str(target)], capture_output=True)
     assert run.returncode == 2
     assert target.read_text() == 'previous evidence'
+
+
+def test_audit_publication_failure_removes_staging_file(tmp_path, monkeypatch):
+    import json
+    from watertrace import cli
+    source, target = tmp_path / 'report.json', tmp_path / 'audit.json'
+    source.write_text(json.dumps({'cases': [case('A', 'a'), case('B', 'b')]}))
+    monkeypatch.setattr(audit.sys, 'argv', ['audit', str(source), '--output', str(target)])
+
+    def fail_link(*args):
+        raise OSError('simulated publication failure')
+
+    monkeypatch.setattr(cli.os, 'link', fail_link)
+    with pytest.raises(SystemExit) as error:
+        audit.main()
+    assert error.value.code == 2
+    assert not target.exists()
+    assert not list(tmp_path.glob('.watertrace-*.tmp'))

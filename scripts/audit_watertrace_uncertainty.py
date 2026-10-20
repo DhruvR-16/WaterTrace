@@ -6,8 +6,13 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import sys
 
 import numpy as np
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from watertrace.cli import save_report
 
 KEYS = ('tp', 'fp', 'fn', 'tn', 'labeled', 'assessed', 'unknown_water')
 METHODS = ('watertrace', 'vh_otsu', 'filtered_vh_otsu', 'filtered_dual_otsu')
@@ -99,8 +104,7 @@ def main():
         result = audit(json.loads(raw))
         result['source_report_sha256'] = hashlib.sha256(raw).hexdigest()
         encoded = json.dumps(result, indent=2, allow_nan=False) + '\n'
-        with args.output.open('x') as target:
-            target.write(encoded)
+        save_report(args.output, encoded)
     except (OSError, ValueError, TypeError, AttributeError, RecursionError) as exc:
         parser.exit(2, f'Audit failed: {exc}\n')
     print(json.dumps({'events': result['events'], 'chips': result['chips'], 'pooled': result['pooled']}, indent=2))
