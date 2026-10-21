@@ -1,4 +1,4 @@
-# WaterTrace readiness — 20 October 2026
+# WaterTrace readiness — 21 October 2026
 
 ## Working local scope
 
@@ -13,7 +13,9 @@ The Sites local-preview guidance informed browser verification and responsive la
 
 ## Local verification record
 
-Latest local suite: **330 Python tests and 80 JavaScript tests passed** after evaluation-provenance hardening; dependency consistency passed. Compose configuration validation previously passed. Container execution and fresh browser visual QA remain unverified.
+Latest local suite: **331 Python tests and 80 JavaScript tests passed** after the map-first dashboard refresh; dependency consistency passed. Compose configuration validation previously passed. Container execution and fresh browser visual QA remain unverified.
+
+- Map-first dashboard refresh: light observation sidebar and header, dark teal onboarding panel, grouped scene metrics, larger mobile observation labels and a restyled review queue. The map now precedes the longer result explanation in both DOM and visual order; guidance and limitations remain expanded below it. Sites local-workflow guidance informed the responsive layout, keyboard focus and progressive controls. Static markup, contrast-pair and frontend behavior tests pass, as does the live HTTP smoke check. These are not a rendered-browser sign-off. No analysis, export or detector logic changed.
 
 - Evaluation-provenance hardening: evaluator records label filenames/digests and Python/OpenCV/NumPy/Rasterio/GDAL versions. Radar, labels and manifest are hashed from the exact bytes used rather than reread after processing. Evaluation/audit reports use the existing private, complete-file, no-overwrite publication helper. Tests cover mid-run disk changes, empty evaluations, prior outputs, dangling symlinks, private permissions and publication failures without partial destinations. `make verify` passed, all nine synthetic cases passed, and a full 90-chip reproduction retained every original count, event metric and uncertainty interval. This is reproducibility hardening, not a detector change or new accuracy result.
 

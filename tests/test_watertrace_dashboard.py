@@ -77,9 +77,22 @@ def test_guided_workspace_has_empty_state_and_progressive_technical_controls():
     assert all('open' not in attrs for attrs in advanced)
 
 
+def test_map_first_layout_uses_matching_reading_order_and_keeps_guidance_visible():
+    html = (ROOT / 'index.html').read_text()
+    assert html.index('class="metrics"') < html.index('class="workspace"')
+    assert html.index('class="workspace"') < html.index('id="result-guide"')
+    assert html.index('id="result-guide"') < html.index('id="zone-detail"')
+    guide = next(attrs for _, attrs in Elements(html).elements if attrs.get('id') == 'result-guide')
+    assert 'hidden' not in guide
+    css = (ROOT / 'style.css').read_text()
+    assert '.getting-started :focus-visible { outline-color:var(--accent); }' in css
+    assert '#examples { grid-template-columns:1fr; }' in css
+    assert not re.search(r'(?<![\w-])order\s*:', css)  # Keep visual and keyboard order aligned.
+
+
 @pytest.mark.parametrize('foreground,background', [
-    ('142d36', 'ffffff'), ('526871', 'ffffff'), ('526871', 'eef3f5'),
-    ('adc5ce', '102b35'), ('e0eef2', '254752'), ('102b35', 'b8ec75'),
+    ('142d36', 'ffffff'), ('526871', 'ffffff'), ('526871', 'f4f6f5'),
+    ('adc5ce', '102b35'), ('142d36', 'e8f3f5'), ('102b35', 'b8ec75'),
     ('ffffff', '176979'), ('775214', 'faf5e9'),
 ])
 def test_primary_dashboard_text_palette_has_readable_contrast(foreground, background):
