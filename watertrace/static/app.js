@@ -12,6 +12,7 @@ function busy(active) {
   $('busy').hidden=!active;
   $('next-zone').disabled=active||!state.report||M.reviewPlan(state.report,state.reviews).pending===0;
   $('start-upload').disabled=active;
+  $('try-practice').disabled=active;
   $('try-example').disabled=active||![...document.querySelectorAll('.example')].some(b=>b.dataset.available==='true');
   $('main-content').setAttribute('aria-busy',String(active));
   document.querySelectorAll('.example,.lab-card,#upload-button,#export-button,#geojson-export-button,#restore-button,#draw-button,#import-button').forEach(el=>el.disabled=active || (['export-button','geojson-export-button','restore-button','draw-button','import-button'].includes(el.id)&&!state.report));
@@ -286,6 +287,14 @@ $('comparison-toggle').addEventListener('change',renderView);$('comparison-posit
 $('next-zone').addEventListener('click',()=>{if(!state.report||state.controller)return;captureReviewDraft();const next=M.reviewPlan(state.report,state.reviews).next_zone_id;if(next!==null){state.filter='all';selectZone(next);}});
 $('start-upload').addEventListener('click',()=>$('upload-dialog').showModal());
 $('try-example').addEventListener('click',()=>[...document.querySelectorAll('.example')].find(b=>b.dataset.available==='true')?.click());
+$('try-practice').addEventListener('click',()=>openLabCase('new-water'));
+function openLabCase(id){
+  if(state.controller||!confirmReviewReplacement())return;
+  state.lab=id;state.example=null;state.upload=null;state.zones=null;
+  $('lab-library').hidden=true;
+  document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed','false'));
+  return analyze();
+}
 $('review-note').addEventListener('input',captureReviewDraft);$('review-outcome').addEventListener('change',captureReviewDraft);
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>setQueueFilter(button.dataset.filter)));
 $('cancel-button').addEventListener('click',()=>state.controller?.abort());
@@ -300,9 +309,9 @@ $('upload-form').addEventListener('submit',event=>{event.preventDefault();const 
 });
 async function init(){
   try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);let examples;try{examples=await fetchJSON('/api/examples',{signal:controller.signal});}finally{clearTimeout(timer);}
-    $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.dataset.exampleId=item.id;button.dataset.available=String(item.available);button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',item.date));button.append(caption);button.addEventListener('click',()=>{if(!confirmReviewReplacement())return;state.example=item.id;state.lab=null;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
+    $('examples').replaceChildren(...examples.map((item,index)=>{const button=element('button',undefined,'example');button.dataset.exampleId=item.id;button.dataset.available=String(item.available);button.setAttribute('aria-pressed','false');button.append(element('span',String(index+1).padStart(2,'0'),'example-number'));const caption=element('span');caption.append(element('strong',item.title),element('small',`${item.date} · ${item.available?'Ready to explore':'Not downloaded'}`));button.append(caption);button.addEventListener('click',()=>{if(!item.available){message('This satellite example is not installed. Use Try without files, or ask the app operator to run: python scripts/fetch_watertrace_data.py --split demo, then reload.');return;}if(!confirmReviewReplacement())return;state.example=item.id;state.lab=null;state.upload=null;state.zones=null;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));analyze();});return button;}));
     busy(false);
-    if(!examples.some(item=>item.available))message('The public demo has not been downloaded. Run: python scripts/fetch_watertrace_data.py --split demo. You can also upload your own calibrated radar.');
+    if(!examples.some(item=>item.available))message('No satellite examples are installed. Choose Try without files for generated practice data. For real imagery, the app operator can run: python scripts/fetch_watertrace_data.py --split demo, then reload. No download is needed for practice.');
   }catch(error){message('Cannot load examples. Start the WaterTrace service and reload this page.');}
 }
 function renderLab(lab,rejection=''){
@@ -322,7 +331,7 @@ $('lab-button').addEventListener('click',async()=>{
       button.append(element('small',item.kind==='synthetic'?'SYNTHETIC CONTRACT':'REGIONAL REPLAY'),element('strong',item.title),element('span',item.question));
       if(!item.available)button.append(element('small','Download required: --split lab'));
       button.disabled=!!state.controller;
-      button.addEventListener('click',()=>{if(!confirmReviewReplacement())return;state.lab=item.id;state.example=null;state.upload=null;state.zones=null;$('lab-library').hidden=true;document.querySelectorAll('.example').forEach(b=>b.setAttribute('aria-pressed','false'));analyze();});return button;}));
+      button.addEventListener('click',()=>openLabCase(item.id));return button;}));
   }catch(error){message('Cannot load the Evidence Lab. Check the local service and reopen the library.');}
 });
 init();

@@ -209,7 +209,7 @@ async function reviewUI(){
   const document={getElementById:get,querySelectorAll:query,createElement:()=>new Element(),createElementNS:()=>new Element(),createTextNode:text=>text};
   const context=vm.createContext({document,window:{WaterTraceModel:model,addEventListener:(n,f)=>events[n]=f,
     confirm:()=>{captured.confirmCalls++;return captured.confirm;}},
-    fetch:async()=>({ok:true,json:async()=>[{id:'india',title:'India',date:'2020-01-10',available:false}]}),
+    fetch:async()=>({ok:true,json:async()=>[{id:'india',title:'India',date:'2020-01-10',available:true}]}),
     AbortController,AbortSignal,Blob,FormData,URL:{createObjectURL:blob=>{captured.blob=blob;return 'blob:test';},revokeObjectURL(){}},
     setTimeout:(fn,ms)=>{captured.timers.push({fn,ms});return captured.timers.length;},clearTimeout(){}});
   vm.runInContext(fs.readFileSync(require.resolve('../watertrace/static/app.js'),'utf8'),context);
@@ -623,4 +623,39 @@ test('practice summaries retain synthetic and evidence-limit disclosures',()=>{
   assert.match(explanation.title,/Practice result/);
   assert.match(explanation.detail,/not an actual satellite observation/);
   assert.match(explanation.detail,/1 review zone/);
+});
+
+test('no installed imagery still offers practice and does not request missing files',async()=>{
+  const ui=await reviewUI(),calls=[];
+  ui.context.fetch=async url=>{calls.push(url);return {ok:true,json:async()=>[{id:'india',title:'India',date:'2020-01-10',available:false}]};};
+  await ui.run('init()');
+  assert.equal(ui.get('try-example').disabled,true);
+  assert.equal(ui.get('try-practice').disabled,false);
+  assert.match(ui.get('message').textContent,/Try without files/);
+  ui.get('examples').children[0].click();
+  assert.deepEqual(calls,['/api/examples']);
+  assert.equal(ui.run('state.report===fixture'),true);
+  assert.match(ui.get('message').textContent,/not installed/);
+});
+
+test('practice entry uses generated lab case and preserves replacement guard',async()=>{
+  const ui=await reviewUI();
+  ui.run('analyze=async()=>{window.practiceRequested=state.lab;}');
+  ui.get('review-note').value='Keep this draft';ui.captured.confirm=false;
+  ui.get('try-practice').click();
+  assert.equal(ui.run('window.practiceRequested'),undefined);
+  assert.equal(ui.run('state.report===fixture'),true);
+  ui.captured.confirm=true;ui.get('try-practice').click();
+  assert.equal(ui.run('window.practiceRequested'),'new-water');
+  assert.equal(ui.run('state.example'),null);
+  assert.equal(ui.run('state.upload'),null);
+});
+
+test('practice cannot replace an in-flight request',async()=>{
+  const ui=await reviewUI();ui.run('state.controller=new AbortController();busy(true)');
+  assert.equal(ui.get('try-practice').disabled,true);
+  ui.run("openLabCase('new-water')");
+  assert.equal(ui.run('state.example'),'original');
+  ui.run('state.controller=null;busy(false)');
+  assert.equal(ui.get('try-practice').disabled,false);
 });

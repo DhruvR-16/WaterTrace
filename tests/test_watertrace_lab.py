@@ -15,6 +15,24 @@ from watertrace.decisions import review_decision
 SYNTHETIC=[item['id'] for item in CASES if item['kind']=='synthetic']
 
 
+def test_no_files_practice_works_with_empty_data_directory(tmp_path, monkeypatch):
+    monkeypatch.setenv('WATERTRACE_DATA', str(tmp_path))
+    monkeypatch.setattr(catalog, 'DATA', tmp_path)
+    monkeypatch.setattr(catalog, 'RASTERS', tmp_path / 'data/flood_events/HandLabeled')
+    with TestClient(app) as client:
+        examples = client.get('/api/examples').json()
+        assert not any(item['available'] for item in examples)
+        response = client.post('/api/lab/new-water/run')
+        assert response.status_code == 200
+        report = response.json()
+        assert report['lab']['kind'] == 'synthetic'
+        assert 'not real satellite' in report['lab']['notice']
+        assert report['summary']['water_observed_ha'] > 0
+        assert report['images']['radar'] and report['images']['change']
+        assert report['zones'] and report['reference']
+    assert not list(tmp_path.iterdir())
+
+
 @pytest.mark.parametrize('identifier',SYNTHETIC)
 def test_all_contract_exercises_run_real_pipeline(identifier):
     result=run_case(identifier)

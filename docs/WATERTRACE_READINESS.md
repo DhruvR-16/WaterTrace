@@ -13,7 +13,9 @@ The Sites local-preview guidance informed browser verification and responsive la
 
 ## Local verification record
 
-Latest local suite: **331 Python tests and 80 JavaScript tests passed** after the map-first dashboard refresh; dependency consistency passed. Compose configuration validation previously passed. Container execution and fresh browser visual QA remain unverified.
+Latest local suite: **332 Python tests and 83 JavaScript tests passed** after no-file onboarding; dependency consistency passed. Compose configuration validation previously passed. Container execution and fresh browser visual QA remain unverified.
+
+- No-file onboarding: added a prominent “Try without files” action that runs the existing synthetic paired-radar case through the actual pipeline, with explicit synthetic disclosure. Missing real examples are labeled and give installation instructions without starting a failed request. Practice shares the existing review-replacement guard and is blocked while a request is active. An API test verifies generated analysis with an empty data folder; frontend tests cover no-cache startup, missing-example clicks, draft protection and busy state. Sites local-workflow guidance informed onboarding; no new imagery downloads, backend inference changes or rendered-browser verification are claimed.
 
 - Map-first dashboard refresh: light observation sidebar and header, dark teal onboarding panel, grouped scene metrics, larger mobile observation labels and a restyled review queue. The map now precedes the longer result explanation in both DOM and visual order; guidance and limitations remain expanded below it. Sites local-workflow guidance informed the responsive layout, keyboard focus and progressive controls. Static markup, contrast-pair and frontend behavior tests pass, as does the live HTTP smoke check. These are not a rendered-browser sign-off. No analysis, export or detector logic changed.
 
